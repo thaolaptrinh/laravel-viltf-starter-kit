@@ -1,0 +1,68 @@
+// Entry file (composition root). Composes auth + billing, adds ops tables.
+Project enterprise {
+  database_type: 'PostgreSQL'
+  note: 'Multi-module enterprise schema: auth + billing + ops'
+}
+
+use { table users } from './auth'
+use {
+  table subscriptions
+  table invoices
+} from './billing'
+use { tablepartial audited } from './common'
+
+Table notifications {
+  ~audited
+  id int [pk, increment]
+  user_id int [ref: > users.id, not null]
+  channel varchar(20) [not null]
+  body text
+  sent_at timestamp
+
+  indexes {
+    user_id [name: 'idx_notifications_user']
+  }
+}
+
+Table audit_log {
+  ~audited
+  id bigint [pk, increment]
+  actor_id int [ref: > users.id]
+  action varchar(80) [not null]
+  detail json
+
+  indexes {
+    actor_id [name: 'idx_audit_actor']
+  }
+}
+
+// TableGroup members must be locally defined (cannot reference imported tables).
+TableGroup ops [color: #9B59B6, note: 'operations domain'] {
+  notifications
+  audit_log
+}
+
+records notifications(id, user_id, channel, body, sent_at) {
+  1, 1, 'email', 'Welcome aboard', `2024-01-01 09:00:00`
+  2, 2, 'sms', 'Verify your account', `2024-01-02 10:30:00`
+}
+
+Note arch [color: #F4D03F] {
+  '''
+  # Architecture
+  - common.dbml:  shared TablePartial (audit columns)
+  - auth.dbml:    identity (users, api_keys, roles)
+  - billing.dbml: subscriptions, invoices, payments
+  - main.dbml:    ops tables + composition root (this file)
+  '''
+}
+
+DiagramView identity_billing {
+  Tables {
+    users
+    subscriptions
+    invoices
+    notifications
+  }
+  Schemas { * }
+}

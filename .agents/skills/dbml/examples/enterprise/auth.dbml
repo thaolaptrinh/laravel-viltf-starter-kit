@@ -1,0 +1,27 @@
+// Identity module. Reused by billing and main.
+use { tablepartial audited } from './common'
+
+Enum role {
+  admin
+  member
+  viewer
+}
+
+Table users {
+  ~audited
+  id int [pk, increment]
+  email varchar(255) [unique, not null]
+  role role [default: 'member', not null]
+}
+
+Table api_keys {
+  ~audited
+  id int [pk, increment]
+  user_id int [ref: > users.id, not null]
+  token_hash varchar(128) [unique, not null]
+  last_used_at timestamp
+
+  indexes {
+    user_id [name: 'idx_api_keys_user']
+  }
+}

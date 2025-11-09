@@ -1,0 +1,151 @@
+Project laravel_viltf_starter {
+    database_type: 'PostgreSQL'
+    note: 'Database schema for the Laravel VILT/F starter kit — users, authentication, cache, and queue.'
+}
+
+// ───────────────────────── Application ─────────────────────────
+
+Table users {
+    id                        bigint       [pk, increment]
+    name                      varchar(255) [not null]
+    email                     varchar(255) [unique, not null]
+    email_verified_at         timestamp
+    password                  varchar(255) [not null]
+    two_factor_secret         text
+    two_factor_recovery_codes text
+    two_factor_confirmed_at   timestamp
+    remember_token            varchar(100)
+    created_at                timestamp
+    updated_at                timestamp
+
+    Note: 'Registered application accounts. Holds credentials, email verification state, and optional two-factor authentication (TOTP) data.'
+}
+
+Table notifications {
+    id              uuid         [pk]
+    type            varchar(255) [not null]
+    notifiable_type varchar(255) [not null]
+    notifiable_id   bigint       [not null]
+    data            json         [not null]
+    read_at         timestamp
+    created_at      timestamp
+    updated_at      timestamp
+
+    indexes {
+        (notifiable_type, notifiable_id) [name: 'notifications_notifiable_type_notifiable_id_index']
+    }
+
+    Note: 'Application notifications on a polymorphic notifiable relation (notifiable_type + notifiable_id). The target model is dynamic, so no single foreign key is declared.'
+}
+
+// ───────────────────────── Authentication ─────────────────────────
+
+Table password_reset_tokens {
+    email      varchar(255) [pk]
+    token      varchar(255) [not null]
+    created_at timestamp
+
+    Note: 'Single-use tokens issued for password reset requests, keyed by the user email address.'
+}
+
+Table sessions {
+    id            varchar(255) [pk]
+    user_id       bigint       [ref: > users.id]
+    ip_address    varchar(45)
+    user_agent    text
+    payload       text         [not null]
+    last_activity int          [not null]
+
+    indexes {
+        (user_id)
+        (last_activity)
+    }
+
+    Note: 'Driver-based sessions, one row per active browser session.'
+}
+
+// ───────────────────────── Cache ─────────────────────────
+
+Table cache {
+    key        varchar(255) [pk]
+    value      text         [not null]
+    expiration int          [not null]
+
+    Note: 'Application cache store: key/value pairs with a Unix expiration timestamp.'
+}
+
+Table cache_locks {
+    key        varchar(255) [pk]
+    owner      varchar(255) [not null]
+    expiration int          [not null]
+
+    Note: 'Atomic locks held within the cache store for coordinating concurrent work.'
+}
+
+// ───────────────────────── Queue ─────────────────────────
+
+Table jobs {
+    id           bigint       [pk, increment]
+    queue        varchar(255) [not null]
+    payload      text         [not null]
+    attempts     smallint     [not null]
+    reserved_at  int
+    available_at int          [not null]
+    created_at   int          [not null]
+
+    indexes {
+        (queue)
+    }
+
+    Note: 'Pending and in-flight queue jobs.'
+}
+
+Table job_batches {
+    id             varchar(255) [pk]
+    name           varchar(255) [not null]
+    total_jobs     int          [not null]
+    pending_jobs   int          [not null]
+    failed_jobs    int          [not null]
+    failed_job_ids text         [not null]
+    options        text
+    cancelled_at   int
+    created_at     int          [not null]
+    finished_at    int
+
+    Note: 'Batched jobs tracked as a group with aggregate progress counters.'
+}
+
+Table failed_jobs {
+    id         bigint       [pk, increment]
+    uuid       varchar(255) [unique, not null]
+    connection text         [not null]
+    queue      text         [not null]
+    payload    text         [not null]
+    exception  text         [not null]
+    failed_at  timestamp    [default: `now()`]
+
+    Note: 'Jobs that exceeded the maximum retry attempts, retained for inspection and retry.'
+}
+
+// ───────────────────────── Grouping ─────────────────────────
+
+TableGroup Application [color: #2563EB] {
+    users
+    notifications
+}
+
+TableGroup Authentication [color: #16A34A] {
+    password_reset_tokens
+    sessions
+}
+
+TableGroup Cache [color: #D97706] {
+    cache
+    cache_locks
+}
+
+TableGroup Queue [color: #9333EA] {
+    jobs
+    job_batches
+    failed_jobs
+}

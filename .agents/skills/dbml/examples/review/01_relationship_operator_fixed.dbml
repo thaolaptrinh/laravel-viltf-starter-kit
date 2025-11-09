@@ -1,0 +1,7 @@
+// FIXED — explicit junction table (the recommended many-to-many pattern).
+Table users { id int [pk] }
+Table roles { id int [pk] }
+Table user_roles {
+  user_id int [ref: > users.id, pk]
+  role_id int [ref: > roles.id, pk]
+}

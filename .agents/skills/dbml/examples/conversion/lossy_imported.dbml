@@ -1,0 +1,6 @@
+Table "accounts" {
+  "id" serial [pk, increment]
+  "email" varchar(255) [unique, not null]
+  "email_lower" text
+  "created_at" timestamp [default: `now()`]
+}

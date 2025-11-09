@@ -1,0 +1,50 @@
+// Basic — minimal but non-toy task tracker.
+// Demonstrates: Project block, Enum, inline refs, defaults, indexes (incl. composite), notes.
+Project task_tracker {
+  database_type: 'PostgreSQL'
+  note: 'A minimal task tracker schema'
+}
+
+Enum task_status {
+  backlog
+  in_progress
+  done
+  cancelled
+}
+
+Table users {
+  id int [pk, increment]
+  email varchar(255) [unique, not null, note: 'login identity']
+  display_name varchar(100)
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    email [unique, name: 'idx_users_email']
+  }
+}
+
+Table projects {
+  id int [pk, increment]
+  name varchar(200) [not null]
+  owner_id int [ref: > users.id, not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    owner_id [name: 'idx_projects_owner']
+  }
+}
+
+Table tasks {
+  id int [pk, increment]
+  project_id int [ref: > projects.id, not null]
+  assignee_id int [ref: > users.id]
+  title varchar(300) [not null]
+  status task_status [default: 'backlog', not null]
+  due_date date
+
+  indexes {
+    project_id [name: 'idx_tasks_project']
+    assignee_id [name: 'idx_tasks_assignee']
+    (project_id, status) [name: 'idx_tasks_project_status']
+  }
+}

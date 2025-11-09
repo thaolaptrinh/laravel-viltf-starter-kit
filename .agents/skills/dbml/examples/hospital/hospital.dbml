@@ -1,0 +1,136 @@
+// Hospital management — appointments, admissions, prescriptions, records.
+// Demonstrates: time fields, enums, soft delete, composite index, notes, checks.
+Project hospital {
+  database_type: 'PostgreSQL'
+  note: 'A hospital management schema'
+}
+
+Enum appointment_status {
+  scheduled
+  checked_in
+  in_consult
+  completed
+  cancelled
+  no_show
+}
+
+Enum admission_type {
+  emergency
+  routine
+  day_care
+  observation
+}
+
+Table departments {
+  id int [pk, increment]
+  name varchar(120) [unique, not null]
+  floor int
+}
+
+Table doctors {
+  id int [pk, increment]
+  department_id int [ref: > departments.id, not null]
+  full_name varchar(150) [not null]
+  specialization varchar(150)
+  license_no varchar(40) [unique, not null]
+
+  indexes {
+    department_id [name: 'idx_doctors_dept']
+  }
+}
+
+Table patients {
+  id int [pk, increment]
+  full_name varchar(150) [not null]
+  date_of_birth date
+  gender char(1)
+  phone varchar(30)
+  created_at timestamp [default: `now()`]
+  deleted_at timestamp                        // soft delete
+
+  indexes {
+    (full_name, date_of_birth) [name: 'idx_patients_name_dob']
+  }
+}
+
+Table appointments {
+  id int [pk, increment]
+  patient_id int [ref: > patients.id, not null]
+  doctor_id int [ref: > doctors.id, not null]
+  "when" timestamp [not null]                 // 'when' is a reserved word -> quoted
+  status appointment_status [default: 'scheduled', not null]
+  reason text
+
+  indexes {
+    (doctor_id, "when") [name: 'idx_appts_doctor_when']
+    patient_id [name: 'idx_appts_patient']
+  }
+}
+
+Table rooms {
+  id int [pk, increment]
+  department_id int [ref: > departments.id, not null]
+  room_no varchar(20) [not null]
+  capacity int [default: 1, not null]
+
+  indexes {
+    department_id [name: 'idx_rooms_dept']
+  }
+
+  checks {
+    `capacity > 0` [name: 'chk_capacity_positive']
+  }
+}
+
+Table admissions {
+  id int [pk, increment]
+  patient_id int [ref: > patients.id, not null]
+  doctor_id int [ref: > doctors.id, not null]
+  room_id int [ref: > rooms.id]
+  type admission_type [not null]
+  admitted_at timestamp [default: `now()`]
+  discharged_at timestamp
+
+  indexes {
+    patient_id [name: 'idx_admissions_patient']
+    (room_id, discharged_at) [name: 'idx_admissions_room_active']
+  }
+
+  checks {
+    `discharged_at IS NULL OR discharged_at >= admitted_at` [name: 'chk_discharge_after_admit']
+  }
+}
+
+Table medical_records {
+  id int [pk, increment]
+  patient_id int [ref: > patients.id, not null]
+  admission_id int [ref: > admissions.id]
+  recorded_by int [ref: > doctors.id, not null]
+  diagnosis text
+  notes text
+  recorded_at timestamp [default: `now()`]
+
+  indexes {
+    patient_id [name: 'idx_records_patient']
+  }
+}
+
+Table prescriptions {
+  id int [pk, increment]
+  record_id int [ref: > medical_records.id, not null]
+  medication varchar(200) [not null]
+  dosage varchar(80)
+  prescribed_at timestamp [default: `now()`]
+
+  indexes {
+    record_id [name: 'idx_prescriptions_record']
+  }
+}
+
+TableGroup clinical [color: #E74C3C, note: 'clinical domain'] {
+  patients
+  appointments
+  admissions
+  medical_records
+  prescriptions
+}

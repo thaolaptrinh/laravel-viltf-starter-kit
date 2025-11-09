@@ -1,0 +1,11 @@
+Enum "orders_status_enum" {
+  "created"
+  "paid"
+  "shipped"
+}
+
+Table "orders" {
+  "id" int [pk, increment]
+  "status" orders_status_enum [not null]
+  "total" decimal(10,2) [not null]
+}

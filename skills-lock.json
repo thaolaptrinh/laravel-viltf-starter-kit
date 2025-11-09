@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "skills": {
+        "dbml": {
+            "source": "thaolaptrinh/skills",
+            "sourceType": "github",
+            "skillPath": "skills/dbml/SKILL.md",
+            "computedHash": "efd21bdeb1392e0e8da7152f5a731046181a96ce411a0da434f2548af276373d"
+        }
+    }
+}

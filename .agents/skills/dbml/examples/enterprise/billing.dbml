@@ -1,0 +1,47 @@
+// Billing module. Depends on auth.users; uses the shared audited partial.
+use { table users } from './auth'
+use { tablepartial audited } from './common'
+
+Enum subscription_status {
+  trialing
+  active
+  past_due
+  canceled
+}
+
+Table subscriptions {
+  ~audited
+  id int [pk, increment]
+  user_id int [ref: > users.id, not null, unique]
+  status subscription_status [default: 'trialing', not null]
+  current_period_end date
+
+  indexes {
+    user_id [name: 'idx_subs_user']
+  }
+}
+
+Table invoices {
+  ~audited
+  id int [pk, increment]
+  subscription_id int [ref: > subscriptions.id, not null]
+  amount decimal(10,2) [not null]
+  issued_at timestamp [default: `now()`]
+  paid_at timestamp
+
+  indexes {
+    subscription_id [name: 'idx_invoices_sub']
+  }
+}
+
+Table payments {
+  ~audited
+  id int [pk, increment]
+  invoice_id int [ref: > invoices.id, not null]
+  amount decimal(10,2) [not null]
+  paid_at timestamp [default: `now()`]
+
+  indexes {
+    invoice_id [name: 'idx_payments_invoice']
+  }
+}

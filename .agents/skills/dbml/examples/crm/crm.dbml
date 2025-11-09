@@ -1,0 +1,77 @@
+// CRM — multi-schema (core / sales), enums, composite index, quoted identifier.
+Project crm {
+  database_type: 'PostgreSQL'
+  note: 'CRM schema across core and sales schemas'
+}
+
+Enum opportunity_stage {
+  prospecting
+  qualification
+  proposal
+  negotiation
+  won
+  lost
+}
+
+Table core.users {
+  id int [pk, increment]
+  email varchar(255) [unique, not null]
+  full_name varchar(150) [not null]
+  team varchar(80)
+}
+
+Table sales.accounts {
+  id int [pk, increment]
+  name varchar(200) [not null]
+  website varchar(300)
+  industry varchar(100)
+  owner_id int [ref: > core.users.id, not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    owner_id [name: 'idx_accounts_owner']
+  }
+}
+
+Table sales.contacts {
+  id int [pk, increment]
+  account_id int [ref: > sales.accounts.id, not null]
+  first_name varchar(100)
+  last_name varchar(100)
+  email varchar(255)
+  owner_id int [ref: > core.users.id, not null]
+
+  indexes {
+    account_id [name: 'idx_contacts_account']
+    owner_id [name: 'idx_contacts_owner']
+  }
+}
+
+Table sales.opportunities {
+  id int [pk, increment]
+  account_id int [ref: > sales.accounts.id, not null]
+  owner_id int [ref: > core.users.id, not null]
+  name varchar(200) [not null]
+  amount decimal(12,2)
+  stage opportunity_stage [default: 'prospecting', not null]
+  close_date date
+
+  indexes {
+    account_id [name: 'idx_opps_account']
+    (owner_id, stage) [name: 'idx_opps_owner_stage']
+  }
+}
+
+Table sales.activities {
+  id int [pk, increment]
+  opportunity_id int [ref: > sales.opportunities.id]
+  contact_id int [ref: > sales.contacts.id]
+  owner_id int [ref: > core.users.id, not null]
+  type varchar(40) [not null]
+  "at" timestamp [default: `now()`]      // 'at' is a SQL keyword -> quoted
+  notes text
+
+  indexes {
+    opportunity_id [name: 'idx_activities_opp']
+  }
+}

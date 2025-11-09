@@ -1,0 +1,6 @@
+// Shared building block. Imported by auth/billing/main via 'use'.
+TablePartial audited {
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  created_by int
+}

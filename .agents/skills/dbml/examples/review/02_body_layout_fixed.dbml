@@ -1,0 +1,10 @@
+// FIXED — one item per line in every block body.
+Table users {
+  id int [pk]
+  name varchar
+  email varchar
+}
+Enum status {
+  active
+  inactive
+}
