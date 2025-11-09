@@ -1,0 +1,5 @@
+// BROKEN — '><' is not a DBML relationship operator.
+// Error: "A Ref field must be a binary relationship"
+Table users { id int [pk] }
+Table roles { id int [pk] }
+Ref: users.id >< roles.id

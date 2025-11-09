@@ -1,0 +1,7 @@
+// FIXED — model each logical relationship exactly once.
+Table users { id int [pk] }
+Table orders {
+  id int [pk]
+  user_id int
+}
+Ref: orders.user_id > users.id

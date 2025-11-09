@@ -1,0 +1,4 @@
+// BROKEN — multiple items on one line (table columns + enum values).
+// Error: "These fields must be some inline settings..." / "An Enum must have only a field..."
+Table users { id int [pk] name varchar email varchar }
+Enum status { active inactive }

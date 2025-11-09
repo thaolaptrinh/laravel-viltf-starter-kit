@@ -1,0 +1,7 @@
+// FIXED — use 'type:' for index method and 'default:' for expression defaults.
+Table users {
+  id int [pk]
+  email varchar
+  created_at timestamp [default: `now()`]
+  indexes { (email) [type: btree] }
+}

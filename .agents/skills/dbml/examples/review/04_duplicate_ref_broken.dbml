@@ -1,0 +1,9 @@
+// BROKEN — two refs between the same endpoint pair (even opposite direction).
+// Error: "References with same endpoints exist" — this also BLOCKS SQL export entirely.
+Table users { id int [pk] }
+Table orders {
+  id int [pk]
+  user_id int
+}
+Ref: orders.user_id > users.id
+Ref: users.id < orders.user_id

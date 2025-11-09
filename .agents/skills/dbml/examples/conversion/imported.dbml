@@ -1,0 +1,25 @@
+Enum "order_status" {
+  "pending"
+  "paid"
+  "shipped"
+}
+
+Table "customers" {
+  "id" serial [pk, increment]
+  "email" varchar(255) [unique, not null]
+  "created_at" timestamp [default: `now()`]
+}
+
+Table "orders" {
+  "id" serial [pk, increment]
+  "customer_id" integer [not null]
+  "status" order_status [not null, default: 'pending', note: 'lifecycle state']
+  "total" numeric(10,2)
+
+  Indexes {
+    customer_id [name: "idx_orders_customer"]
+  }
+  Note: 'Customer orders'
+}
+
+Ref:"customers"."id" < "orders"."customer_id" [delete: cascade]

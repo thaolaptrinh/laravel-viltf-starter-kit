@@ -1,0 +1,78 @@
+// Blog platform — demonstrates junction tables, self-reference, expression index, TableGroup.
+Project blog {
+  database_type: 'PostgreSQL'
+  note: 'A blogging platform schema'
+}
+
+Enum post_status {
+  draft
+  published
+  archived
+}
+
+Table users {
+  id int [pk, increment]
+  username varchar(50) [unique, not null]
+  email varchar(255) [unique, not null]
+  bio text
+  created_at timestamp [default: `now()`]
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar(100) [unique, not null]
+  slug varchar(120) [unique, not null]
+}
+
+Table posts {
+  id int [pk, increment]
+  author_id int [ref: > users.id, not null]
+  category_id int [ref: > categories.id]
+  title varchar(300) [not null]
+  body text
+  status post_status [default: 'draft', not null]
+  published_at timestamp
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    author_id [name: 'idx_posts_author']
+    category_id [name: 'idx_posts_category']
+    (`lower(title)`) [type: btree, name: 'idx_posts_title_lower']
+  }
+}
+
+Table comments {
+  id int [pk, increment]
+  post_id int [ref: > posts.id, not null]
+  author_id int [ref: > users.id, not null]
+  parent_id int [ref: > comments.id]     // self-reference: nested comments
+  body text [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    post_id [name: 'idx_comments_post']
+  }
+}
+
+Table tags {
+  id int [pk, increment]
+  name varchar(50) [unique, not null]
+}
+
+// Junction table for the many-to-many posts <-> tags relationship.
+Table post_tags {
+  post_id int [ref: > posts.id, pk]
+  tag_id int [ref: > tags.id, pk]
+
+  indexes {
+    tag_id [name: 'idx_post_tags_tag']
+  }
+}
+
+TableGroup content [color: #3498DB, note: 'content domain'] {
+  posts
+  comments
+  categories
+  tags
+  post_tags
+}

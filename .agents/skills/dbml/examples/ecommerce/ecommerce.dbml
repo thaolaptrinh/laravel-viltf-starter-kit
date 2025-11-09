@@ -1,0 +1,140 @@
+// E-commerce — medium-large: customers, orders, order_items, products, payments, shipments.
+// Demonstrates: composite keys, money types, CHECK constraints, enums, FK indexes, self-ref category tree.
+Project ecommerce {
+  database_type: 'PostgreSQL'
+  note: 'An e-commerce order-management schema'
+}
+
+Enum order_status {
+  pending
+  paid
+  fulfilled
+  shipped
+  delivered
+  cancelled
+  refunded
+}
+
+Enum payment_method {
+  card
+  paypal
+  bank_transfer
+  store_credit
+}
+
+Table customers {
+  id int [pk, increment]
+  email varchar(255) [unique, not null]
+  first_name varchar(100)
+  last_name varchar(100)
+  created_at timestamp [default: `now()`]
+}
+
+Table addresses {
+  id int [pk, increment]
+  customer_id int [ref: > customers.id, not null]
+  line1 varchar(255) [not null]
+  line2 varchar(255)
+  city varchar(100) [not null]
+  postal_code varchar(20) [not null]
+  country char(2) [not null, note: 'ISO 3166-1 alpha-2']
+
+  indexes {
+    customer_id [name: 'idx_addresses_customer']
+  }
+}
+
+Table categories {
+  id int [pk, increment]
+  parent_id int [ref: > categories.id]     // self-reference: category tree
+  name varchar(160) [not null]
+  slug varchar(180) [unique, not null]
+
+  indexes {
+    parent_id [name: 'idx_categories_parent']
+  }
+}
+
+Table products {
+  id int [pk, increment]
+  category_id int [ref: > categories.id, not null]
+  sku varchar(64) [unique, not null]
+  name varchar(255) [not null]
+  price decimal(10,2) [not null, note: 'in minor units? no — currency units']
+  stock int [default: 0, not null]
+
+  indexes {
+    category_id [name: 'idx_products_category']
+    sku [unique, name: 'idx_products_sku']
+  }
+}
+
+Table orders {
+  id int [pk, increment]
+  customer_id int [ref: > customers.id, not null]
+  billing_address_id int [ref: > addresses.id]
+  shipping_address_id int [ref: > addresses.id]
+  status order_status [default: 'pending', not null]
+  placed_at timestamp [default: `now()`]
+
+  indexes {
+    customer_id [name: 'idx_orders_customer']
+    (customer_id, status) [name: 'idx_orders_customer_status']
+  }
+}
+
+Table order_items {
+  id int [pk, increment]
+  order_id int [ref: > orders.id, not null]
+  product_id int [ref: > products.id, not null]
+  quantity int [not null]
+  unit_price decimal(10,2) [not null]
+
+  indexes {
+    order_id [name: 'idx_order_items_order']
+    product_id [name: 'idx_order_items_product']
+  }
+
+  checks {
+    `quantity > 0` [name: 'chk_qty_positive']
+    `unit_price >= 0` [name: 'chk_price_nonneg']
+  }
+}
+
+Table payments {
+  id int [pk, increment]
+  order_id int [ref: > orders.id, not null]
+  method payment_method [not null]
+  amount decimal(10,2) [not null]
+  paid_at timestamp [default: `now()`]
+
+  indexes {
+    order_id [name: 'idx_payments_order']
+  }
+
+  checks {
+    `amount >= 0` [name: 'chk_payment_amount']
+  }
+}
+
+Table shipments {
+  id int [pk, increment]
+  order_id int [ref: > orders.id, not null]
+  address_id int [ref: > addresses.id, not null]
+  carrier varchar(80)
+  tracking_no varchar(60)
+  shipped_at timestamp
+
+  indexes {
+    order_id [name: 'idx_shipments_order']
+  }
+}
+
+TableGroup commerce [color: #2ECC71, note: 'commerce domain'] {
+  customers
+  orders
+  order_items
+  products
+  payments
+  shipments
+}
