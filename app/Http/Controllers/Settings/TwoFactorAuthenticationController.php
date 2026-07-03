@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Models\User;
+use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -28,12 +29,9 @@ final class TwoFactorAuthenticationController extends Controller implements HasM
     /**
      * Show the user's two-factor authentication settings page.
      */
-    public function show(TwoFactorAuthenticationRequest $request): Response
+    public function show(TwoFactorAuthenticationRequest $request, #[CurrentUser] User $user): Response
     {
         $request->ensureStateIsValid();
-
-        /** @var User $user */
-        $user = $request->user();
 
         return Inertia::render('settings/TwoFactor', [
             'twoFactorEnabled' => $user->hasEnabledTwoFactorAuthentication(),

@@ -8,6 +8,8 @@ use App\Actions\DeleteUserAccount;
 use App\Actions\UpdateUserProfile;
 use App\Data\ProfileData;
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,39 +18,32 @@ use Inertia\Response;
 
 final class ProfileController extends Controller
 {
-    public function __construct(
-        private readonly UpdateUserProfile $updateProfile,
-        private readonly DeleteUserAccount $deleteAccount,
-    ) {}
-
-    public function edit(Request $request): Response
+    public function edit(Request $request, #[CurrentUser] User $user): Response
     {
         return Inertia::render('settings/Profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail, // @phpstan-ignore instanceof.alwaysFalse
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail, // @phpstan-ignore instanceof.alwaysFalse
             'status' => $request->session()->get('status'),
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, #[CurrentUser] User $user, UpdateUserProfile $updateUserProfile): RedirectResponse
     {
         $data = ProfileData::from($request);
 
-        $this->updateProfile->handle($request->user(), $data);
+        $updateUserProfile->handle($user, $data);
 
         return to_route('profile.edit');
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, #[CurrentUser] User $user, DeleteUserAccount $deleteUserAccount): RedirectResponse
     {
         $request->validate([
             'password' => ['required', 'current_password'],
         ]);
 
-        $user = $request->user();
-
         auth()->logout();
 
-        $this->deleteAccount->handle(
+        $deleteUserAccount->handle(
             $user,
             $request->input('password'),
         );
