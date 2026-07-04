@@ -30,5 +30,6 @@ dbml-error.log
 /.zed
 
 **/caddy
-frankenphp
-frankenphp-worker.php
+/frankenphp
+/frankenphp-worker.php
+!docker/deployment/frankenphp/

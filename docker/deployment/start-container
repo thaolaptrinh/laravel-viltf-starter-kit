@@ -13,7 +13,7 @@ initial_stuff() {
             || php artisan migrate --seed --force
     fi
 
-    php artisan storage: link 2>/dev/null || true
+    php artisan storage:link 2>/dev/null || true
     php artisan optimize
 }
 
