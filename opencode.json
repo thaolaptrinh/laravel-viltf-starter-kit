@@ -4,7 +4,11 @@
         "laravel-boost": {
             "type": "local",
             "enabled": true,
-            "command": ["vendor/bin/sail", "artisan", "boost:mcp"]
+            "command": [
+                "vendor/bin/sail",
+                "artisan",
+                "boost:mcp"
+            ]
         }
     }
 }

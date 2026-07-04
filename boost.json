@@ -1,10 +1,15 @@
 {
-    "agents": ["claude_code", "opencode"],
+    "agents": [
+        "claude_code",
+        "opencode"
+    ],
     "cloud": false,
     "guidelines": true,
     "mcp": true,
     "nightwatch": false,
-    "packages": ["filament/filament"],
+    "packages": [
+        "filament/filament"
+    ],
     "sail": true,
     "skills": [
         "fortify-development",

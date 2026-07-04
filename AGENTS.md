@@ -98,7 +98,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
 - Always use single quotes to prevent shell expansion: `vendor/bin/sail artisan tinker --execute 'Your::code();'`
-    - Double quotes for PHP strings inside: `vendor/bin/sail artisan tinker --execute 'User::where("active", true)->count();'`
+  - Double quotes for PHP strings inside: `vendor/bin/sail artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
@@ -110,10 +110,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
 - Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
 - Use array shape type definitions in PHPDoc blocks.
-
-## General Guidelines
-
-- Don't include any superfluous PHP Annotations, except ones that start with `@` for typing variables.
 
 === deployments rules ===
 
@@ -194,118 +190,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 ## Vite Error
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `vendor/bin/sail pnpm run build` or ask the user to run `vendor/bin/sail pnpm run dev` or `vendor/bin/sail composer run dev`.
-
-## Controller Conventions
-
-- **Pure CRUD** → one resource controller with the standard methods (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`). Generate with `vendor/bin/sail artisan make:controller ArticleController --resource`.
-- **Single, non-CRUD operation** → a dedicated invokable (single-action) controller using `__invoke()`. Generate with `vendor/bin/sail artisan make:controller PublishArticleController --invokable`. One operation = one controller.
-- Inject Actions via method injection and use a `#[CurrentUser] User $user` attribute as described in [Using Actions](#using-actions).
-
-@boostsnippet('Resource controller vs invokable controller', 'php')
-
-<?php
-
-declare(strict_types=1);
-
-namespace App\Http\Controllers;
-
-use App\Actions\PublishArticle;
-use App\Models\Article;
-use App\Models\User;
-use Illuminate\Container\Attributes\CurrentUser;
-use Illuminate\Http\RedirectResponse;
-
-// Pure CRUD -> resource controller
-final class ArticleController extends Controller
-{
-    public function index()
-    {
-        // list...
-    }
-
-    public function store()
-    {
-        // create...
-    }
-}
-
-// Single operation -> invokable controller
-final class PublishArticleController extends Controller
-{
-    public function __invoke(Article $article, #[CurrentUser] User $user, PublishArticle $publishArticle): RedirectResponse
-    {
-        $publishArticle->handle($user, $article);
-
-        return to_route('articles.show', $article);
-    }
-}
-@endboostsnippet 
-
-## App/Actions guidelines
-
-- This application uses the Action pattern and prefers for much logic to live in reusable and composable Action classes.
-- Actions live in `app/Actions`, they are named based on what they do, with no suffix.
-- Actions will be called from many different places: jobs, commands, HTTP requests, API requests, MCP requests, and more.
-- Create dedicated Action classes for business logic with a single `handle()` method.
-- Inject dependencies via constructor using private properties.
-- Create new actions with `php artisan make:action "{name}" --no-interaction`
-- Wrap complex operations in `DB::transaction()` within actions when multiple models are involved.
-- Some actions won't require dependencies via `__construct` and they can use just the `handle()` method.
-
-@boostsnippet('Example action class', 'php')
-
-<?php
-
-declare(strict_types=1);
-
-namespace App\Actions;
-
-final readonly class CreateFavorite
-{
-    public function __construct(private FavoriteService $favorites)
-    {
-        //
-    }
-
-    public function handle(User $user, string $favorite): bool
-    {
-        return $this->favorites->add($user, $favorite);
-    }
-}
-@endboostsnippet 
-
-## Using Actions
-
-- Inject Action classes via **method injection** at the method that uses them — do NOT inject Actions through the consumer's constructor (no controller-wide/global properties).
-- Laravel resolves type-hinted Action params in controller methods automatically from the container.
-- Invoke `$action->handle(...)` inside that method body only.
-- For the authenticated user, prefer the `#[CurrentUser]` attribute (`Illuminate\Container\Attributes\CurrentUser`) over `$request->user()`.
-
-@boostsnippet('Using an action via method injection', 'php')
-
-<?php
-
-declare(strict_types=1);
-
-namespace App\Http\Controllers;
-
-use App\Actions\CreateArticle;
-use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreArticleRequest;
-use App\Models\User;
-use Illuminate\Container\Attributes\CurrentUser;
-use Illuminate\Http\RedirectResponse;
-
-final class ArticleController extends Controller
-{
-    public function store(StoreArticleRequest $request, #[CurrentUser] User $user, CreateArticle $createArticle): RedirectResponse
-    {
-        $createArticle->handle($user, $request->validated());
-
-        return to_route('articles.index');
-    }
-}
-@endboostsnippet 
 
 === wayfinder/core rules ===
 
@@ -573,3 +457,129 @@ livewire(ListUsers::class)
   - `$view`: `protected string` (not `protected static string`) on `Page` and `Widget` classes
 
 </laravel-boost-guidelines>
+
+<app-guidelines>
+# Application Guidelines
+
+This application follows an Action-based architecture: controllers stay thin and business logic lives in reusable, composable Action classes. Follow the conventions below for consistency across the codebase.
+
+## Controller Conventions
+
+Choose the controller type based on the operation it performs:
+
+- **Pure CRUD** → one resource controller with the standard methods (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`). Generate with `vendor/bin/sail artisan make:controller ArticleController --resource`.
+- **Single, non-CRUD operation** → a dedicated invokable (single-action) controller using `__invoke()`. Generate with `vendor/bin/sail artisan make:controller PublishArticleController --invokable`. One operation = one controller.
+
+In both cases, inject Actions via method injection and resolve the authenticated user with a `#[CurrentUser] User $user` attribute (see [Using Actions](#using-actions)):
+
+<code-snippet name="Resource controller vs invokable controller" lang="php">
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Actions\PublishArticle;
+use App\Models\Article;
+use App\Models\User;
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\RedirectResponse;
+
+// Pure CRUD -> resource controller
+final class ArticleController extends Controller
+{
+    public function index()
+    {
+        // list...
+    }
+
+    public function store()
+    {
+        // create...
+    }
+}
+
+// Single operation -> invokable controller
+final class PublishArticleController extends Controller
+{
+    public function __invoke(Article $article, #[CurrentUser] User $user, PublishArticle $publishArticle): RedirectResponse
+    {
+        $publishArticle->handle($user, $article);
+
+        return to_route('articles.show', $article);
+    }
+}
+
+</code-snippet>
+
+## Action Classes
+
+This application prefers business logic to live in reusable, composable Action classes rather than controllers or models.
+
+- Actions live in `app/Actions` and are named for what they do, with no suffix.
+- Each Action exposes a single `handle()` method as its entry point.
+- Inject dependencies via the constructor using private properties; actions with no dependencies can rely on `handle()` alone.
+- Actions are invoked from anywhere: jobs, commands, HTTP requests, API requests, and MCP requests.
+- Wrap complex, multi-model operations in `DB::transaction()` to keep them atomic.
+- Create new actions with `vendor/bin/sail artisan make:action "{name}" --no-interaction`.
+
+A typical Action injects its collaborators through the constructor and exposes a `handle()` method:
+
+<code-snippet name="Example action class" lang="php">
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions;
+
+final readonly class CreateFavorite
+{
+    public function __construct(private FavoriteService $favorites)
+    {
+        //
+    }
+
+    public function handle(User $user, string $favorite): bool
+    {
+        return $this->favorites->add($user, $favorite);
+    }
+}
+
+</code-snippet>
+
+## Using Actions
+
+- Inject Action classes via **method injection** at the method that uses them — do NOT inject Actions through the consumer's constructor (no controller-wide/global properties).
+- Laravel resolves type-hinted Action params in controller methods automatically from the container.
+- Invoke `$action->handle(...)` inside that method body only.
+- For the authenticated user, prefer the `#[CurrentUser]` attribute (`Illuminate\Container\Attributes\CurrentUser`) over `$request->user()`.
+
+Inject the Action and the current user directly into the controller method, then delegate to `handle()`:
+
+<code-snippet name="Using an action via method injection" lang="php">
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Actions\CreateArticle;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreArticleRequest;
+use App\Models\User;
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\RedirectResponse;
+
+final class ArticleController extends Controller
+{
+    public function store(StoreArticleRequest $request, #[CurrentUser] User $user, CreateArticle $createArticle): RedirectResponse
+    {
+        $createArticle->handle($user, $request->validated());
+
+        return to_route('articles.index');
+    }
+}
+
+</code-snippet>
+
+</app-guidelines>
