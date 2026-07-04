@@ -33,4 +33,19 @@ dbml-error.log
 /frankenphp
 /frankenphp-worker.php
 !docker/deployment/frankenphp/
+
+# Docker secrets
+.env
+.env.staging
+.env.production
+docker/traefik/certs/*.pem
+docker/traefik/certs/*.key
+docker/traefik/certs/private.key
+
+# Compose local overrides + backups
+compose.override.local.yml
+compose.yaml.sail.bak
+
+# Backups
+backups/
 compose.yaml.sail.bak
