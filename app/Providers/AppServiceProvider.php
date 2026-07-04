@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 final class AppServiceProvider extends ServiceProvider
@@ -22,6 +23,12 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootLoadMigrations();
+
+        // Force HTTPS scheme when behind Traefik in staging/production.
+        // Trusted proxies are configured via bootstrap/app.php middleware.
+        if ($this->app->environment('production', 'staging')) {
+            URL::forceScheme('https');
+        }
     }
 
     /**
