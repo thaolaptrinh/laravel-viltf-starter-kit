@@ -33,3 +33,4 @@ dbml-error.log
 /frankenphp
 /frankenphp-worker.php
 !docker/deployment/frankenphp/
+compose.yaml.sail.bak
