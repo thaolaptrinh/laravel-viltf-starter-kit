@@ -73,8 +73,10 @@ services:
             POSTGRES_DB: ${DB_DATABASE:-laravel}
             POSTGRES_USER: ${DB_USERNAME:-laravel}
             POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+        command: postgres -c config_file=/var/lib/postgresql/postgresql.conf
         volumes:
             - stack-pgsql:/var/lib/postgresql/data
+            - ./docker/deployment/postgres/postgresql.conf:/var/lib/postgresql/postgresql.conf:ro
         healthcheck:
             test:
                 [
