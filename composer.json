@@ -54,22 +54,22 @@
         }
     },
     "scripts": {
-        "setup": [
-            "composer install",
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "pnpm install",
-            "pnpm run build"
+        "test": "@php artisan test",
+        "test:type-coverage": "pest --type-coverage --min=100",
+        "test:lint": [
+            "pint --parallel --test",
+            "rector --dry-run",
+            "pnpm run test:lint"
         ],
-        "dev": [
-            "Composer\\Config::disableProcessTimeout",
-            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,logs,vite --kill-others"
+        "test:types": [
+            "phpstan --memory-limit=512M",
+            "pnpm run test:types"
         ],
-        "dev:ssr": [
-            "pnpm run build:ssr",
-            "Composer\\Config::disableProcessTimeout",
-            "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"php artisan inertia:start-ssr\" --names=server,queue,logs,ssr --kill-others"
+        "test:unit": "pest --parallel --coverage --exactly=100.0",
+        "lint": [
+            "rector",
+            "pint --parallel",
+            "pnpm run lint"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -93,30 +93,6 @@
         "update:requirements": [
             "composer bump",
             "pnpm dlx npm-check-updates -u"
-        ],
-        "lint": [
-            "rector",
-            "pint --parallel",
-            "pnpm run lint"
-        ],
-        "test:type-coverage": "pest --type-coverage --min=100",
-        "test:lint": [
-            "pint --parallel --test",
-            "rector --dry-run",
-            "pnpm run test:lint"
-        ],
-        "test:unit": "pest --parallel --coverage --exactly=100.0",
-        "test:types": [
-            "phpstan --memory-limit=512M",
-            "pnpm run test:types"
-        ],
-        "test": [
-            "@php artisan config:clear --ansi",
-            "@php artisan test",
-            "@test:type-coverage",
-            "@test:unit",
-            "@test:lint",
-            "@test:types"
         ]
     },
     "extra": {
