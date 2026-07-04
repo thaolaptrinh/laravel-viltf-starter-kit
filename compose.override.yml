@@ -1,0 +1,8 @@
+# Auto-loaded by `docker compose up` for dev environment.
+# Most dev defaults live in compose.yaml; this file reserves space for user overrides.
+# For personal local tweaks, use compose.override.local.yml (gitignored).
+services:
+  app:
+    environment:
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
+      IGNITION_LOCAL_SITES_PATH: ${PWD}
