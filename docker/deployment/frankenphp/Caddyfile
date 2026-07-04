@@ -1,0 +1,11 @@
+{
+    admin off
+    auto_https off
+    order php_server before file_server
+}
+
+:8000 {
+    root * /var/www/html/public
+    encode zstd gzip
+    php_server
+}

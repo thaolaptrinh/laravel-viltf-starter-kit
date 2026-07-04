@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+set -e
+
+container_mode="${CONTAINER_MODE:-http}"
+run_migrations="${RUNNING_MIGRATIONS_AND_SEEDERS:-false}"
+
+initial_stuff() {
+    echo "Container mode: ${container_mode}"
+
+    if [ "${run_migrations}" = "true" ]; then
+        echo "Running migrations and seeders..."
+        php artisan migrate --isolated --seed --force \
+            || php artisan migrate --seed --force
+    fi
+
+    php artisan storage: link 2>/dev/null || true
+    php artisan optimize
+}
+
+if [ -n "$1" ]; then
+    # Allow ad-hoc command: docker compose exec app <cmd>
+    exec "$@"
+elif [ "${container_mode}" = "http" ]; then
+    initial_stuff
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.http.conf
+elif [ "${container_mode}" = "horizon" ]; then
+    initial_stuff
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.horizon.conf
+elif [ "${container_mode}" = "scheduler" ]; then
+    initial_stuff
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.scheduler.conf
+elif [ "${container_mode}" = "ssr" ]; then
+    initial_stuff
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.ssr.conf
+elif [ "${container_mode}" = "reverb" ]; then
+    initial_stuff
+    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.reverb.conf
+else
+    echo "Unknown CONTAINER_MODE: ${container_mode}" >&2
+    exit 1
+fi
