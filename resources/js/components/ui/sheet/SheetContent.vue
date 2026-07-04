@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 import { reactiveOmit } from '@vueuse/core'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import {
   DialogClose,
   DialogContent,

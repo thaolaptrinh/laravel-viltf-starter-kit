@@ -18,8 +18,11 @@ importers:
   .:
     dependencies:
       '@inertiajs/vue3':
-        specifier: ^3.5.0
-        version: 3.5.0(axios@1.18.1)(vue@3.5.39(typescript@6.0.3))
+        specifier: ^3.6.0
+        version: 3.6.0(axios@1.18.1)(vue@3.5.39(typescript@6.0.3))
+      '@lucide/vue':
+        specifier: ^1.23.0
+        version: 1.23.0(vue@3.5.39(typescript@6.0.3))
       '@vueuse/core':
         specifier: ^14.3.0
         version: 14.3.0(vue@3.5.39(typescript@6.0.3))
@@ -32,9 +35,6 @@ importers:
       laravel-vite-plugin:
         specifier: ^3.1.0
         version: 3.1.0(@voidzero-dev/vite-plus-core@0.2.2(@types/node@26.1.0)(esbuild@0.28.1)(jiti@2.7.0)(typescript@6.0.3))
-      lucide-vue-next:
-        specifier: ^1.0.0
-        version: 1.0.0(vue@3.5.39(typescript@6.0.3))
       reka-ui:
         specifier: ^2.10.1
         version: 2.10.1(vue@3.5.39(typescript@6.0.3))
@@ -299,16 +299,16 @@ packages:
   '@floating-ui/vue@1.1.11':
     resolution: {integrity: sha512-HzHKCNVxnGS35r9fCHBc3+uCnjw9IWIlCPL683cGgM9Kgj2BiAl8x1mS7vtvP6F9S/e/q4O6MApwSHj8hNLGfw==}
 
-  '@inertiajs/core@3.5.0':
-    resolution: {integrity: sha512-k0RpPULYD6d+FsYUIaSkUbvLbMGBRkzMc+qHhwfTVrMwCvXd6FyQ+O99PT5AN4j3BKy96XT45AKDwBhhti8Tgg==}
+  '@inertiajs/core@3.6.0':
+    resolution: {integrity: sha512-56L16uTtv6rtTfSkqqjte39DO4P5nyNf4Df0HCnn8YBteff5rjifO/2bX8he5unXI7udnJj3YWg9KxRyEkYRHQ==}
     peerDependencies:
       axios: ^1.15.2
     peerDependenciesMeta:
       axios:
         optional: true
 
-  '@inertiajs/vue3@3.5.0':
-    resolution: {integrity: sha512-QhwjmUG32uDtaSoBfWpOZl5krwK+nqua+hPqNOlahOiRPan+TKtMri5fdhZxOfjdPjbjNX1zL1Oi3ileZWvpvw==}
+  '@inertiajs/vue3@3.6.0':
+    resolution: {integrity: sha512-o5r7J9uXz/bCQjSKccRyYRRd+v4d/ctNigmciIwdDQF+tOT9a1JM9nlq2uyvJur1o7b6CqZ7hkGR+mEj7l0cfw==}
     peerDependencies:
       vue: ^3.0.0
 
@@ -336,6 +336,11 @@ packages:
 
   '@laravel/vite-plugin-wayfinder@0.1.7':
     resolution: {integrity: sha512-yZYIr1iwuCQ7LFI+GsJk9vacw1HWMp3ZlDlW0pdfz3zXyKeu4US7oH79KmQQ031L0cYaSyaUMo/Ha1D4BosKqw==}
+
+  '@lucide/vue@1.23.0':
+    resolution: {integrity: sha512-9SIYeY5K+R1iv8F8JUKMGSL7Pck/86BJ8djtZz/lnYsoHtKFUj1H2z6+PvKnC/8blZ8tqTDeDXAoTKobuX80hg==}
+    peerDependencies:
+      vue: '>=3.0.1'
 
   '@oxc-project/runtime@0.138.0':
     resolution: {integrity: sha512-yHhoXsN8tYxgdJCdD91PbySNjEEaBX/tH2OQRDXJpsQv5b184oC4/qVbU7qlblvfil/JP15Lh2HW7+HN5DS90Q==}
@@ -1319,12 +1324,6 @@ packages:
     resolution: {integrity: sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==}
     engines: {node: '>= 12.0.0'}
 
-  lucide-vue-next@1.0.0:
-    resolution: {integrity: sha512-V6SPvx1IHTj/UY+FrIYWV5faISsPSb8BnWSFDxAtezWKvWc9ZZ40PDrdu1/Qb5vg4lHWr1hs1BAMGVGm6V1Xdg==}
-    deprecated: Package deprecated. Please use @lucide/vue instead.
-    peerDependencies:
-      vue: '>=3.0.1'
-
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
@@ -1775,7 +1774,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@inertiajs/core@3.5.0(axios@1.18.1)':
+  '@inertiajs/core@3.6.0(axios@1.18.1)':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       es-toolkit: 1.49.0
@@ -1783,9 +1782,9 @@ snapshots:
     optionalDependencies:
       axios: 1.18.1
 
-  '@inertiajs/vue3@3.5.0(axios@1.18.1)(vue@3.5.39(typescript@6.0.3))':
+  '@inertiajs/vue3@3.6.0(axios@1.18.1)(vue@3.5.39(typescript@6.0.3))':
     dependencies:
-      '@inertiajs/core': 3.5.0(axios@1.18.1)
+      '@inertiajs/core': 3.6.0(axios@1.18.1)
       es-toolkit: 1.49.0
       laravel-precognition: 2.0.0(axios@1.18.1)
       vue: 3.5.39(typescript@6.0.3)
@@ -1820,6 +1819,10 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
 
   '@laravel/vite-plugin-wayfinder@0.1.7': {}
+
+  '@lucide/vue@1.23.0(vue@3.5.39(typescript@6.0.3))':
+    dependencies:
+      vue: 3.5.39(typescript@6.0.3)
 
   '@oxc-project/runtime@0.138.0': {}
 
@@ -2600,10 +2603,6 @@ snapshots:
       lightningcss-linux-x64-musl: 1.32.0
       lightningcss-win32-arm64-msvc: 1.32.0
       lightningcss-win32-x64-msvc: 1.32.0
-
-  lucide-vue-next@1.0.0(vue@3.5.39(typescript@6.0.3)):
-    dependencies:
-      vue: 3.5.39(typescript@6.0.3)
 
   lz-string@1.5.0: {}
 
