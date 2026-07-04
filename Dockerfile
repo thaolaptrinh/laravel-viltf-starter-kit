@@ -5,6 +5,9 @@ ARG FRANKENPHP_VERSION=1.12.4
 ARG COMPOSER_VERSION=2.8
 ARG NODE_VERSION=22
 
+# ─── Composer binary (alias used by base stage to copy composer binary) ─────
+FROM composer:${COMPOSER_VERSION} AS composer-binary
+
 # ─── Base stage ─────────────────────────────────────────────────────────────
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}-alpine AS base
 
@@ -60,7 +63,7 @@ RUN arch="$(apk --print-arch)" && \
     mkdir -p /etc/supercronic
 
 # Composer binary
-COPY --link --from=composer:${COMPOSER_VERSION} /usr/bin/composer /usr/bin/composer
+COPY --link --from=composer-binary /usr/bin/composer /usr/bin/composer
 
 # Non-root user matching host UID/GID
 RUN addgroup -g ${GROUP_ID} ${GROUP} 2>/dev/null || true && \
@@ -105,6 +108,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && \
 COPY --link . .
 RUN pnpm run build && pnpm run build:ssr
 
+# ─── Node runtime (alias used by dev stage to copy node binary) ─────────────
+FROM node:${NODE_VERSION}-alpine AS node-runtime
+
 # ─── Dev target ─────────────────────────────────────────────────────────────
 FROM base AS dev
 
@@ -116,9 +122,9 @@ RUN apk add --no-cache \
     apk del linux-headers autoconf make g++ && \
     rm -rf /var/cache/apk/*
 
-# Install Node + pnpm in dev target (for Vite HMR)
-COPY --link --from=node:${NODE_VERSION}-alpine /usr/local/bin /usr/local/bin
-COPY --link --from=node:${NODE_VERSION}-alpine /usr/local/lib/node_modules /usr/local/lib/node_modules
+# Install Node + pnpm in dev target (for Vite HMR) — copy from node-runtime stage
+COPY --link --from=node-runtime /usr/local/bin /usr/local/bin
+COPY --link --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Dev vendor
