@@ -5,8 +5,12 @@
         build build-production \
         push-staging push-production deploy-staging deploy-production \
         release-staging release-production rollout-staging rollout-production production-scale-up production-scale-down \
-        reload-staging reload-production \
-        artisan pnpm composer exec shell tinker test fresh \
+        reload-staging reload-production rollback-production \
+        artisan pnpm composer exec shell tinker db-shell redis-shell lint status \
+        init-env-staging init-env-production \
+        setup-cf-cert setup-vps setup-vps-login \
+        upload-certs upload-env-staging upload-env-production \
+        test fresh \
         clean
 
 IMAGE ?= ghcr.io/thaolaptrinh/laravel-viltf
@@ -242,6 +246,27 @@ shell: ## Get shell in app container
 
 tinker: ## Tinker
 	$(COMPOSE_DEV) exec app php artisan tinker
+
+db-shell: ## PostgreSQL shell (psql)
+	$(COMPOSE_DEV) exec pgsql psql -U $${DB_USERNAME:-laravel} -d $${DB_DATABASE:-laravel}
+
+redis-shell: ## Redis CLI shell
+	$(COMPOSE_DEV) exec redis redis-cli
+
+lint: ## Run linters (Pint + Rector + ESLint)
+	$(COMPOSE_DEV) exec app composer lint
+
+status: ## Show container health status
+	@$(COMPOSE_DEV) ps --format 'table {{.Name}}\t{{.Status}}\t{{.Ports}}'
+
+rollback-production: ## Rollback production to previous image (TAG=v1.0.0)
+	@test -n "$(TAG)" || { echo "❌ Usage: make rollback-production TAG=sha-abcd12"; exit 1; }
+	@echo "⏪ Rolling back to $(TAG)..."
+	ssh $(SSH_PRODUCTION) '\
+		cd $(APP_DIR) && \
+		IMAGE_TAG=$(TAG) docker compose -f compose.yaml -f compose.production.yml up -d --no-deps app horizon ssr reverb && \
+		docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload'
+	@echo "✅ Rolled back to $(TAG)"
 
 test: ## Run tests in isolated testing env: make test CMD="--filter=TestName"
 	$(COMPOSE_TEST) up -d --wait pgsql redis

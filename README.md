@@ -1,118 +1,154 @@
-<a id="top"></a>
+# Laravel VILT-F Starter Kit
 
-# 🚀 Laravel VILTF Starter Kit
+A Laravel starter kit with Vue, Inertia, Livewire, Filament, Tailwind CSS, and TypeScript. Powered by FrankenPHP + Octane for maximum performance.
 
-<div align="center">
+## Prerequisites
 
-A modern, full-featured Laravel starter kit with **Vue 3**, **Inertia.js**, **Tailwind CSS**, and **Filament** — ready for building fullstack applications and admin dashboards.
+- **Docker** (with Compose v2.20+)
+- **GNU Make**
+- **Git**
 
-[![Laravel](https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel)](https://laravel.com)
-[![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?style=for-the-badge&logo=vue.js)](https://vuejs.org)
-[![Inertia](https://img.shields.io/badge/Inertia-3.x-9553E9?style=for-the-badge)](https://inertiajs.com)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.x-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
-[![Filament](https://img.shields.io/badge/Filament-5.x-F59E0B?style=for-the-badge)](https://filamentphp.com)
-[![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=for-the-badge&logo=php)](https://php.net)
-[![Pest](https://img.shields.io/badge/Pest-4.x-FF3064?style=for-the-badge)](https://pestphp.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+No local PHP/Composer/Node.js needed — everything runs in containers.
 
-[![GitHub Stars](https://img.shields.io/github/stars/thaolaptrinh/laravel-viltf-starter-kit?style=social)](https://github.com/thaolaptrinh/laravel-viltf-starter-kit/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/thaolaptrinh/laravel-viltf-starter-kit?style=social)](https://github.com/thaolaptrinh/laravel-viltf-starter-kit/network/members)
-
-</div>
-
----
-
-## ✨ What's Included
-
-- **Vue 3** + **TypeScript** + **Inertia.js v3** — Modern SPA-like experience with SSR support
-- **Tailwind CSS v4** — Utility-first styling with dark mode
-- **Filament v5** — Beautiful admin panel out of the box (mounted at `/admin`)
-- **Laravel Fortify** — Complete authentication: login, registration, email verification, password reset, **2FA** (QR + recovery codes), and **passkeys**
-- **Laravel Wayfinder** — Type-safe route generation for TypeScript
-- **Reka UI** — Beautiful, accessible headless Vue components
-- **@lucide/vue** + **VueUse** — Icon set and composable utilities
-- **Spatie laravel-data** + **laravel-typescript-transformer** — Typed data objects with automatic TypeScript type generation
-- **Laravel Pail** — Real-time log tailing during development
-- **Laravel Boost** — Development tooling and MCP server integration
-- **Pest PHP v4** — Modern testing framework with browser testing support (Playwright)
-- Code quality tools: **Pint**, **Rector**, **Larastan**, **ESLint**, **Prettier** (via [vite-plus](https://viteplus.dev))
-
----
-
-## 📋 Requirements
-
-| Tool     | Version                                                    |
-| -------- | ---------------------------------------------------------- |
-| PHP      | `8.5+`                                                     |
-| Composer | `2.x`                                                      |
-| Node.js  | `20+` (with `pnpm`)                                        |
-| Docker   | required for [Laravel Docker compose](https://laravel.com/docs/sail) |
-
-> This project ships with **Laravel Docker compose** (Docker). All commands below run inside Docker compose — no local PHP/Postgres setup required.
-
----
-
-## 📦 Installation
-
-### Quick start
+## Quick Start
 
 ```bash
 git clone https://github.com/thaolaptrinh/laravel-viltf-starter-kit.git
 cd laravel-viltf-starter-kit
-composer setup
+make install
 ```
 
-The `composer setup` script runs the full bootstrap for you:
+This will:
+1. Copy `.env.example` → `.env`
+2. Build the dev Docker image (PHP 8.5 + FrankenPHP + Octane)
+3. Install composer + pnpm dependencies inside container
+4. Start dev environment (app + horizon + pgsql + redis)
 
-1. `composer install`
-2. Copies `.env.example` → `.env`
-3. Generates the app key
-4. Runs migrations
-5. `pnpm install`
-6. `pnpm run build`
+Open: <http://localhost:8080>
 
-### Start the dev environment
+## Common Commands
 
 ```bash
-make dev        # start Postgres + Redis + app
-composer run dev
+make help              # list all commands
+make dev               # start dev environment
+make dev-stop          # stop containers
+make dev-down          # stop & remove containers
+make dev-logs          # tail logs
+make artisan CMD="migrate"          # artisan commands
+make pnpm CMD="install"             # pnpm commands
+make exec CMD="sh"                  # shell in container
+make test               # run tests (isolated testing env)
+make tinker             # tinker
+make fresh              # migrate:fresh --seed
+make db-shell           # PostgreSQL shell
+make redis-shell        # Redis CLI
+make status             # container health
+make lint               # run linters
+make clean              # remove all containers + volumes
 ```
 
-Then visit **http://localhost** (app) and **http://localhost/admin** (Filament panel).
+## Architecture
 
----
+| Component | Technology |
+|---|---|
+| Runtime | PHP 8.5 + FrankenPHP 1.12.4 (Alpine) |
+| Server | Laravel Octane (FrankenPHP driver) |
+| Queue | Laravel Horizon (Redis) |
+| WebSocket | Laravel Reverb |
+| SSR | Inertia.js SSR (Node) |
+| Database | PostgreSQL 18 |
+| Cache | Redis 7 |
+| Edge Proxy | Traefik v3.6 + Cloudflare |
+| Deploy | docker-rollout (zero-downtime) |
 
-## 📚 Documentation
+### Container Modes
 
-- [Laravel](https://laravel.com/docs) · [Inertia.js](https://inertiajs.com) · [Vue.js](https://vuejs.org/docs)
-- [Tailwind CSS v4](https://tailwindcss.com/docs) · [Filament](https://filamentphp.com/docs) · [Livewire](https://livewire.laravel.com/docs)
-- [Laravel Fortify](https://laravel.com/docs/fortify) · [Wayfinder](https://github.com/laravel/wayfinder) · [Laravel Boost](https://github.com/laravel/boost)
-- [Pest](https://pestphp.com) · [Reka UI](https://reka-ui.com) · [VueUse](https://vueuse.org) · [Rector](https://getrector.org/documentation)
+Single Docker image, 5 runtime modes via `CONTAINER_MODE`:
 
----
+| Mode | Command | Purpose |
+|---|---|---|
+| `http` | `octane:frankenphp` | Serve web requests |
+| `horizon` | `horizon` | Queue workers + dashboard |
+| `scheduler` | `supercronic` | Cron jobs |
+| `ssr` | `inertia:start-ssr` | Inertia SSR rendering |
+| `reverb` | `reverb:start` | WebSocket server |
 
-## 🤝 Contributing
+### Environments
 
-Pull requests are welcome! Please ensure the test suite passes before submitting:
+| Profile | Compose files | Services |
+|---|---|---|
+| **dev** | `compose.yaml` + `compose.override.yml` | app, horizon, pgsql, redis |
+| **staging** | `compose.yaml` + `compose.staging.yml` | app, horizon, scheduler, ssr, reverb, pgsql, redis, traefik |
+| **production** | `compose.yaml` + `compose.production.yml` | same as staging + backup (opt-in) |
+| **testing** | `compose.yaml` + `compose.testing.yml` | app (isolated DB, sync queue) |
+
+## Production Deployment
+
+### First-time VPS setup (7 commands, 0 manual dashboard)
 
 ```bash
-composer test
+# 1. Create env files
+make init-env-production
+# Edit .env.production with real secrets
+
+# 2. Generate CF Origin Cert (interactive prompt)
+make setup-cf-cert
+
+# 3. Provision VPS (installs Docker, docker-rollout, clones repo)
+make setup-vps
+
+# 4. GHCR login on VPS
+make setup-vps-login
+
+# 5. Upload certs + env
+make upload-certs
+make upload-env-production
+
+# 6. Build + push image
+make push-production
+
+# 7. Deploy (zero-downtime)
+make deploy-production
 ```
 
----
+### Subsequent deploys
 
-## 📝 License
+```bash
+make release-production   # test → build → push → deploy (1 command)
+```
 
-Created by [@thaolaptrinh](https://github.com/thaolaptrinh) — released under the [MIT License](LICENSE).
+### Rollback
 
----
+```bash
+make rollback-production TAG=sha-abcd12
+```
 
-<div align="center">
+### Scale
 
-**Built with ❤️ using Laravel, Vue, Inertia, Tailwind CSS, and Filament**
+```bash
+make production-scale-up    # 2 replicas
+make production-scale-down  # 1 replica
+```
 
-⭐ Star this repo if you find it helpful!
+## VPS Sizing
 
-[⬆ Back to Top](#top)
+| Profile | Specs | Use case |
+|---|---|---|
+| Minimum | 2 vCPU / 4 GB / 40 GB | Dev/stg, light prod |
+| **Recommended** | 2 vCPU / 6 GB / 60 GB | Production |
+| Heavy | 4 vCPU / 8 GB+ / 120 GB | High traffic |
 
-</div>
+## Testing
+
+Tests run in an isolated environment with separate DB, sync queue, and array cache:
+
+```bash
+make test                              # all unit + feature tests
+make test CMD="--filter=UserTest"      # specific test
+```
+
+A pre-push hook (`.githooks/pre-push`) blocks pushes if tests fail.
+
+## License
+
+[MIT](LICENSE)

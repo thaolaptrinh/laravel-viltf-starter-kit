@@ -1,17 +1,7 @@
-name: Build & Deploy
+name: Build & Deploy (optional fallback — primary CI is local via Makefile)
 
 on:
-  push:
-    branches: [main, develop]
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        options: [staging, production]
-      platforms:
-        description: 'Build platforms'
-        default: 'linux/amd64'
+  workflow_dispatch: {}
 
 env:
   REGISTRY: ghcr.io
