@@ -107,7 +107,7 @@ FROM node:${NODE_VERSION}-alpine AS assets
 WORKDIR /app
 COPY --link package.json pnpm-lock.yaml ./
 RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate && \
-    pnpm install --no-frozen-lockfile
+    pnpm install --no-lockfile
 COPY --link . .
 RUN pnpm run build && pnpm run build:ssr
 
