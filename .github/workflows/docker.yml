@@ -107,6 +107,13 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=staging,enable=${{ github.ref == 'refs/heads/develop' }}
 
+      - name: Build frontend assets (needed for COPY in production target)
+        run: |
+          corepack enable pnpm
+          pnpm install --frozen-lockfile 2>/dev/null || pnpm install --no-lockfile
+          pnpm run build && pnpm run build:ssr
+        continue-on-error: true
+
       - uses: docker/build-push-action@v6
         with:
           context: .
