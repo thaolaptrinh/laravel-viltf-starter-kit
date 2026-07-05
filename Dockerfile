@@ -106,8 +106,8 @@ RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no
 FROM node:${NODE_VERSION}-alpine AS assets
 WORKDIR /app
 COPY --link package.json pnpm-lock.yaml ./
-RUN corepack enable pnpm && corepack prepare pnpm@latest --activate && \
-    pnpm install --no-frozen-lockfile
+RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate && \
+    pnpm install --frozen-lockfile
 COPY --link . .
 RUN pnpm run build && pnpm run build:ssr
 
@@ -128,7 +128,7 @@ RUN apk add --no-cache \
 # Install Node + pnpm in dev target (for Vite HMR) — copy from node-runtime stage
 COPY --link --from=node-runtime /usr/local/bin /usr/local/bin
 COPY --link --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN corepack enable pnpm && corepack prepare pnpm@latest --activate
+RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate
 
 # Dev vendor (with autoload generated, no source code needed)
 COPY --link --chown=${USER}:${GROUP} --from=composer-dev /app/vendor ./vendor
