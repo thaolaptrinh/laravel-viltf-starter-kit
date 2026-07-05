@@ -1,9 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help install \
         dev dev-stop dev-down dev-logs dev-rebuild \
-        staging production staging-logs production-logs staging-down production-down \
+        staging production stg prod staging-logs production-logs staging-down production-down \
         build build-production \
-        rollout-staging rollout-production production-scale-up production-scale-down \
+        push-staging push-production deploy-staging deploy-production \
+        release-staging release-production rollout-staging rollout-production production-scale-up production-scale-down \
         reload-staging reload-production \
         artisan pnpm composer exec shell tinker test fresh \
         clean
@@ -31,6 +32,18 @@ install: ## First-time setup: copy .env, build dev image, install deps in contai
 	$(COMPOSE_DEV) run --rm app composer install
 	$(COMPOSE_DEV) run --rm app pnpm install
 	$(COMPOSE_DEV) up -d
+
+install-rollout: ## Install docker-rollout CLI plugin (required for zero-downtime deploys)
+	@if [ -x ~/.docker/cli-plugins/docker-rollout ]; then \
+		echo "docker-rollout already installed"; \
+	else \
+		echo "Installing docker-rollout..."; \
+		mkdir -p ~/.docker/cli-plugins; \
+		curl -fsSL https://raw.githubusercontent.com/wowu/docker-rollout/master/docker-rollout \
+			-o ~/.docker/cli-plugins/docker-rollout; \
+		chmod +x ~/.docker/cli-plugins/docker-rollout; \
+		echo "docker-rollout installed to ~/.docker/cli-plugins/"; \
+	fi
 
 # ─── Dev ─────────────────────────────────────────────────────────────────────
 
