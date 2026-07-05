@@ -41,6 +41,12 @@ services:
         ports:
             - '${APP_PORT:-8080}:8000'
             - '${VITE_PORT:-5173}:5173'
+        healthcheck:
+            test: ['CMD', 'healthcheck']
+            interval: 10s
+            timeout: 3s
+            retries: 5
+            start_period: 30s
 
     horizon:
         <<: *app-base

@@ -1,3 +1,14 @@
 #!/usr/bin/env sh
 set -e
-curl --fail --max-time 3 http://127.0.0.1:8000/up
+
+# Healthcheck only meaningful for http mode (Octane serves /up).
+# Other modes (horizon/scheduler/ssr/reverb) don't expose HTTP — skip.
+case "${CONTAINER_MODE:-http}" in
+    http)
+        curl --fail --max-time 3 http://127.0.0.1:8000/up
+        ;;
+    *)
+        # For non-http modes, check that supervisor is running
+        supervisorctl status >/dev/null 2>&1
+        ;;
+esac
