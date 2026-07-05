@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 set -e
 
+mkdir -p /tmp/opcache-file-cache
+
 container_mode="${CONTAINER_MODE:-http}"
 run_migrations="${RUNNING_MIGRATIONS_AND_SEEDERS:-false}"
 
