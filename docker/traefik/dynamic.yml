@@ -1,4 +1,7 @@
 tls:
+  certificates:
+    - certFile: /certs/cert.pem
+      keyFile: /certs/private.key
   options:
     default:
       minVersion: VersionTLS12

@@ -46,3 +46,7 @@ compose.yaml.sail.bak
 # Backups
 backups/
 compose.yaml.sail.bak
+
+docker/traefik/certs/*.pem
+docker/traefik/certs/*.key
+docker/traefik/certs/private.key
