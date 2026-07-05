@@ -43,13 +43,6 @@ jobs:
           DB_DATABASE: testing
         run: |
           docker compose -f compose.yaml -f compose.testing.yml up -d --wait pgsql redis
-          # Wait for pgsql to be healthy
-          for i in {1..30}; do
-            docker compose exec -T pgsql pg_isready -U laravel -d testing && break
-            sleep 1
-          done
-          # Create testing DB if not exists (POSTGRES_DB may have been set)
-          docker compose exec -T pgsql psql -U laravel -d postgres -c "CREATE DATABASE testing;" 2>/dev/null || true
 
       - name: Composer validate
         env:
