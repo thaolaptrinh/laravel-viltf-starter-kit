@@ -12,6 +12,12 @@ x-app-base: &app-base
     depends_on:
         pgsql: { condition: service_healthy }
         redis: { condition: service_healthy }
+    volumes:
+        - .:/var/www/html
+        - /var/www/html/vendor
+        - /var/www/html/node_modules
+        - /var/www/html/public/build
+        - /var/www/html/storage/ssr
 
 x-data-healthcheck: &data-hc
     interval: 5s
@@ -35,12 +41,6 @@ services:
         ports:
             - '${APP_PORT:-8080}:8000'
             - '${VITE_PORT:-5173}:5173'
-        volumes:
-            - .:/var/www/html
-            - /var/www/html/vendor
-            - /var/www/html/node_modules
-            - /var/www/html/public/build
-            - /var/www/html/storage/ssr
 
     horizon:
         <<: *app-base
