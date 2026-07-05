@@ -100,7 +100,7 @@ RUN composer install --no-interaction --no-scripts --no-progress
 FROM base AS composer-production
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress --optimize --apcu
+RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress
 
 # ─── Assets stage ───────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS assets
