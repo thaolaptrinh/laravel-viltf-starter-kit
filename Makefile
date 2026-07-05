@@ -73,7 +73,7 @@ build: ## Build dev image
 	$(COMPOSE_DEV) build app
 
 build-production: ## Build production image locally for testing
-	docker build --target=production -t $(IMAGE):local .
+	docker build --target=production -t $(IMAGE):local -f Dockerfile .
 
 # ─── Deploy (zero-downtime via docker-rollout) ──────────────────────────────
 
