@@ -134,9 +134,9 @@ make production-scale-down  # 1 replica
 
 | Profile | Specs | Use case |
 |---|---|---|
-| Minimum | 2 vCPU / 4 GB / 40 GB | Dev/stg, light prod |
-| **Recommended** | 2 vCPU / 6 GB / 60 GB | Production |
-| Heavy | 4 vCPU / 8 GB+ / 120 GB | High traffic |
+| Minimum | 2 vCPU / 4 GB / 30 GB SSD | Dev/stg, light prod |
+| **Recommended** | 2 vCPU / 6 GB / 40 GB SSD | Production |
+| Heavy | 4 vCPU / 8 GB+ / 60 GB+ SSD | High traffic, large DB |
 
 ## Testing
 
