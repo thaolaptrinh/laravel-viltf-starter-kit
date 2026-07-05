@@ -6,13 +6,27 @@ set -euo pipefail
 # Idempotent — safe to run multiple times.
 #
 # Usage:
-#   ./scripts/setup-vps.sh <SSH_USER> <SSH_HOST> [GH_REPO] [APP_DIR]
 #   make setup-vps SSH_USER=root SSH_HOST=1.2.3.4
+#   make setup-vps  (interactive prompt)
 
-SSH_USER="${1:?❌ Usage: setup-vps.sh <SSH_USER> <SSH_HOST> [GH_REPO] [APP_DIR]}"
-SSH_HOST="${2:?❌ Usage: setup-vps.sh <SSH_USER> <SSH_HOST> [GH_REPO] [APP_DIR]}"
-GH_REPO="${3:-thaolaptrinh/laravel-viltf}"
-APP_DIR="${4:-/opt/app}"
+GH_REPO="${GH_REPO:-thaolaptrinh/laravel-viltf}"
+APP_DIR="${APP_DIR:-/opt/app}"
+
+# Prompt for missing values
+SSH_USER="${SSH_USER:-}"
+if [ -z "$SSH_USER" ]; then
+    read -rp "👤 SSH user (e.g., root): " SSH_USER
+    echo ""
+    [ -z "$SSH_USER" ] && { echo "❌ SSH user required"; exit 1; }
+fi
+
+SSH_HOST="${SSH_HOST:-}"
+if [ -z "$SSH_HOST" ]; then
+    read -rp "🌐 VPS IP or hostname: " SSH_HOST
+    echo ""
+    [ -z "$SSH_HOST" ] && { echo "❌ SSH host required"; exit 1; }
+fi
+
 SSH_TARGET="${SSH_USER}@${SSH_HOST}"
 
 echo "🚀 Provisioning ${SSH_TARGET}..."
@@ -81,10 +95,10 @@ echo "✅ VPS ready: ${SSH_TARGET}"
 echo "════════════════════════════════════════"
 echo ""
 echo "Next steps:"
-echo "  1. make setup-vps-login SSH_USER=${SSH_USER} SSH_HOST=${SSH_HOST} GHCR_PAT=xxx GH_USERNAME=xxx"
-echo "  2. make upload-certs SSH_USER=${SSH_USER} SSH_HOST=${SSH_HOST}"
-echo "  3. make upload-env-production SSH_USER=${SSH_USER} SSH_HOST=${SSH_HOST}"
-echo "  4. make deploy-production SSH_PRODUCTION=${SSH_TARGET}"
+echo "  1. make setup-vps-login"
+echo "  2. make upload-certs"
+echo "  3. make upload-env-production"
+echo "  4. make deploy-production"
 PROVISION_SCRIPT
 
 echo ""

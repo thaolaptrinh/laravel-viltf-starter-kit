@@ -104,30 +104,23 @@ init-env-production: ## Create .env.production from template
 	@[ -f .env.production ] || cp .env.production.example .env.production
 	@echo "⚠️  Edit .env.production with real secrets"
 
-setup-cf-cert: ## Generate CF Origin Cert via API (CF_API_TOKEN=xxx APP_DOMAIN=...)
-	@test -n "$(CF_API_TOKEN)" || { echo "❌ Set CF_API_TOKEN"; exit 1; }
-	@test -n "$(APP_DOMAIN)" || { echo "❌ Set APP_DOMAIN"; exit 1; }
-	./scripts/setup-cf-cert.sh "$(CF_API_TOKEN)" "$(APP_DOMAIN)"
+setup-cf-cert: ## Generate CF Origin Cert via API (interactive or CF_API_TOKEN= APP_DOMAIN=)
+	APP_DOMAIN="$(APP_DOMAIN)" CF_API_TOKEN="$(CF_API_TOKEN)" ./scripts/setup-cf-cert.sh
 
-setup-vps: ## Provision VPS: Docker + docker-rollout + clone repo (SSH_USER= SSH_HOST=)
-	@test -n "$(SSH_USER)" || { echo "❌ Set SSH_USER"; exit 1; }
-	@test -n "$(SSH_HOST)" || { echo "❌ Set SSH_HOST"; exit 1; }
-	./scripts/setup-vps.sh "$(SSH_USER)" "$(SSH_HOST)" "$(GH_REPO)" "$(APP_DIR)"
+setup-vps: ## Provision VPS: Docker + docker-rollout + clone (interactive or SSH_USER= SSH_HOST=)
+	SSH_USER="$(SSH_USER)" SSH_HOST="$(SSH_HOST)" GH_REPO="$(GH_REPO)" APP_DIR="$(APP_DIR)" ./scripts/setup-vps.sh
 
-setup-vps-login: ## GHCR login on VPS (SSH_USER= SSH_HOST= GHCR_PAT= GH_USERNAME=)
-	@test -n "$(SSH_USER)" || { echo "❌ Set SSH_USER"; exit 1; }
-	@test -n "$(SSH_HOST)" || { echo "❌ Set SSH_HOST"; exit 1; }
-	@test -n "$(GHCR_PAT)" || { echo "❌ Set GHCR_PAT"; exit 1; }
-	./scripts/setup-vps-login.sh "$(SSH_USER)" "$(SSH_HOST)" "$(GHCR_PAT)" "$(GH_USERNAME)"
+setup-vps-login: ## GHCR login on VPS (interactive or SSH_USER= SSH_HOST= GHCR_PAT= GH_USERNAME=)
+	SSH_USER="$(SSH_USER)" SSH_HOST="$(SSH_HOST)" GHCR_PAT="$(GHCR_PAT)" GH_USERNAME="$(GH_USERNAME)" ./scripts/setup-vps-login.sh
 
-upload-certs: ## SCP certs to VPS (SSH_USER= SSH_HOST=)
-	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" certs
+upload-certs: ## SCP certs to VPS (interactive or SSH_USER= SSH_HOST=)
+	SSH_USER="$(SSH_USER)" SSH_HOST="$(SSH_HOST)" APP_DIR="$(APP_DIR)" ./scripts/upload.sh certs
 
-upload-env-staging: ## SCP .env.staging to VPS (SSH_USER= SSH_HOST=)
-	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" env-staging
+upload-env-staging: ## SCP .env.staging to VPS (interactive or SSH_USER= SSH_HOST=)
+	SSH_USER="$(SSH_USER)" SSH_HOST="$(SSH_HOST)" APP_DIR="$(APP_DIR)" ./scripts/upload.sh env-staging
 
-upload-env-production: ## SCP .env.production to VPS (SSH_USER= SSH_HOST=)
-	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" env-production
+upload-env-production: ## SCP .env.production to VPS (interactive or SSH_USER= SSH_HOST=)
+	SSH_USER="$(SSH_USER)" SSH_HOST="$(SSH_HOST)" APP_DIR="$(APP_DIR)" ./scripts/upload.sh env-production
 
 # ─── Deploy (zero-downtime via docker-rollout) ──────────────────────────────
 

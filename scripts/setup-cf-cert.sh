@@ -6,17 +6,29 @@ set -euo pipefail
 # Saves cert.pem + private.key to docker/traefik/certs/
 #
 # Usage:
-#   ./scripts/setup-cf-cert.sh <CF_API_TOKEN> <APP_DOMAIN>
-#   make setup-cf-cert CF_API_TOKEN=xxx APP_DOMAIN=yourdomain.com
+#   make setup-cf-cert APP_DOMAIN=yourdomain.com
+#   make setup-cf-cert CF_API_TOKEN=xxx APP_DOMAIN=yourdomain.com  (non-interactive)
 #
 # Prerequisites:
 #   - CF API Token with "Origin CA:Edit" permission
-#     (Cloudflare Dashboard → My Profile → API Tokens → Create Token)
 #   - python3 (for JSON parsing)
 
-CF_API_TOKEN="${1:?❌ Usage: setup-cf-cert.sh <CF_API_TOKEN> <APP_DOMAIN>}"
-APP_DOMAIN="${2:?❌ Usage: setup-cf-cert.sh <CF_API_TOKEN> <APP_DOMAIN>}"
 CERTS_DIR="docker/traefik/certs"
+
+# Prompt for missing values (env var → interactive input)
+CF_API_TOKEN="${CF_API_TOKEN:-}"
+if [ -z "$CF_API_TOKEN" ]; then
+    read -rsp "🔑 CF API Token (Origin CA:Edit scope, input hidden): " CF_API_TOKEN
+    echo ""
+    [ -z "$CF_API_TOKEN" ] && { echo "❌ Token required"; exit 1; }
+fi
+
+APP_DOMAIN="${APP_DOMAIN:-}"
+if [ -z "$APP_DOMAIN" ]; then
+    read -rp "🌐 Domain (e.g., yourdomain.com): " APP_DOMAIN
+    echo ""
+    [ -z "$APP_DOMAIN" ] && { echo "❌ Domain required"; exit 1; }
+fi
 
 echo "🔐 Generating CF Origin Cert for *.${APP_DOMAIN} + ${APP_DOMAIN} (15 years)..."
 

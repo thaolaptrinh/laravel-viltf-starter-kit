@@ -5,16 +5,28 @@ set -euo pipefail
 # Upload certs and/or env files to VPS via SCP.
 #
 # Usage:
-#   ./scripts/upload.sh <SSH_USER> <SSH_HOST> <APP_DIR> <what>
-#   <what>: certs | env-staging | env-production | all
-#
 #   make upload-certs SSH_USER=root SSH_HOST=1.2.3.4
 #   make upload-env-production SSH_USER=root SSH_HOST=1.2.3.4
+#   make upload-certs  (interactive prompt)
 
-SSH_USER="${1:?❌ Usage: upload.sh <SSH_USER> <SSH_HOST> <APP_DIR> <what>}"
-SSH_HOST="${2:?❌ Usage: upload.sh <SSH_USER> <SSH_HOST> <APP_DIR> <what>}"
-APP_DIR="${3:-/opt/app}"
-WHAT="${4:-all}"
+APP_DIR="${APP_DIR:-/opt/app}"
+WHAT="${1:-all}"
+
+# Prompt for missing values
+SSH_USER="${SSH_USER:-}"
+if [ -z "$SSH_USER" ]; then
+    read -rp "👤 SSH user: " SSH_USER
+    echo ""
+    [ -z "$SSH_USER" ] && { echo "❌ SSH user required"; exit 1; }
+fi
+
+SSH_HOST="${SSH_HOST:-}"
+if [ -z "$SSH_HOST" ]; then
+    read -rp "🌐 VPS IP or hostname: " SSH_HOST
+    echo ""
+    [ -z "$SSH_HOST" ] && { echo "❌ SSH host required"; exit 1; }
+fi
+
 SSH_TARGET="${SSH_USER}@${SSH_HOST}"
 
 upload_certs() {
