@@ -88,13 +88,14 @@ RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
     chown -R ${USER}:${GROUP} ${ROOT}
 
 # ─── Composer deps (dev) ────────────────────────────────────────────────────
-FROM composer:${COMPOSER_VERSION} AS composer-dev
+# Extends `base` (PHP 8.5 + extensions) to ensure platform check matches runtime.
+FROM base AS composer-dev
 WORKDIR /app
 COPY --link composer.json composer.lock ./
 RUN composer install --no-interaction --no-autoloader --no-scripts --no-progress
 
 # ─── Composer deps (production) ─────────────────────────────────────────────
-FROM composer:${COMPOSER_VERSION} AS composer-production
+FROM base AS composer-production
 WORKDIR /app
 COPY --link composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress --optimize --apcu
