@@ -94,6 +94,41 @@ build: ## Build dev image
 build-production: ## Build production image locally for testing
 	docker build --target=production -t $(IMAGE):local -f Dockerfile .
 
+# ─── VPS Automation (scripts/ wrappers) ───────────────────────────────────
+
+init-env-staging: ## Create .env.staging from template
+	@[ -f .env.staging ] || cp .env.staging.example .env.staging
+	@echo "⚠️  Edit .env.staging with real secrets"
+
+init-env-production: ## Create .env.production from template
+	@[ -f .env.production ] || cp .env.production.example .env.production
+	@echo "⚠️  Edit .env.production with real secrets"
+
+setup-cf-cert: ## Generate CF Origin Cert via API (CF_API_TOKEN=xxx APP_DOMAIN=...)
+	@test -n "$(CF_API_TOKEN)" || { echo "❌ Set CF_API_TOKEN"; exit 1; }
+	@test -n "$(APP_DOMAIN)" || { echo "❌ Set APP_DOMAIN"; exit 1; }
+	./scripts/setup-cf-cert.sh "$(CF_API_TOKEN)" "$(APP_DOMAIN)"
+
+setup-vps: ## Provision VPS: Docker + docker-rollout + clone repo (SSH_USER= SSH_HOST=)
+	@test -n "$(SSH_USER)" || { echo "❌ Set SSH_USER"; exit 1; }
+	@test -n "$(SSH_HOST)" || { echo "❌ Set SSH_HOST"; exit 1; }
+	./scripts/setup-vps.sh "$(SSH_USER)" "$(SSH_HOST)" "$(GH_REPO)" "$(APP_DIR)"
+
+setup-vps-login: ## GHCR login on VPS (SSH_USER= SSH_HOST= GHCR_PAT= GH_USERNAME=)
+	@test -n "$(SSH_USER)" || { echo "❌ Set SSH_USER"; exit 1; }
+	@test -n "$(SSH_HOST)" || { echo "❌ Set SSH_HOST"; exit 1; }
+	@test -n "$(GHCR_PAT)" || { echo "❌ Set GHCR_PAT"; exit 1; }
+	./scripts/setup-vps-login.sh "$(SSH_USER)" "$(SSH_HOST)" "$(GHCR_PAT)" "$(GH_USERNAME)"
+
+upload-certs: ## SCP certs to VPS (SSH_USER= SSH_HOST=)
+	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" certs
+
+upload-env-staging: ## SCP .env.staging to VPS (SSH_USER= SSH_HOST=)
+	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" env-staging
+
+upload-env-production: ## SCP .env.production to VPS (SSH_USER= SSH_HOST=)
+	./scripts/upload.sh "$(SSH_USER)" "$(SSH_HOST)" "$(APP_DIR)" env-production
+
 # ─── Deploy (zero-downtime via docker-rollout) ──────────────────────────────
 
 # ── Push to GHCR (requires `docker login ghcr.io` once) ────────────────────
