@@ -92,7 +92,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-      - ./docker/traefik/certs:/certs:ro
     networks: [stack]
     labels:
       traefik.enable: true

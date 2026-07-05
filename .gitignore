@@ -38,9 +38,6 @@ dbml-error.log
 .env
 .env.staging
 .env.production
-docker/traefik/certs/*.pem
-docker/traefik/certs/*.key
-docker/traefik/certs/private.key
 
 # Compose local overrides + backups
 compose.override.local.yml
