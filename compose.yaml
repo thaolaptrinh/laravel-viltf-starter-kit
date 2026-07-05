@@ -1,0 +1,131 @@
+x-app-base: &app-base
+    image: ${IMAGE:-ghcr.io/${GH_REPO:-thaolaptrinh/laravel-viltf}:${IMAGE_TAG:-dev}}
+    networks: [stack]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    logging:
+        driver: json-file
+        options: { max-size: '50m', max-file: '10', compress: 'true' }
+    env_file:
+        - path: .env
+          required: false
+    depends_on:
+        pgsql: { condition: service_healthy }
+        redis: { condition: service_healthy }
+    volumes:
+        - .:/var/www/html
+        - /var/www/html/vendor
+        - /var/www/html/node_modules
+        - /var/www/html/public/build
+        - /var/www/html/storage/ssr
+
+x-data-healthcheck: &data-hc
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+services:
+    app:
+        <<: *app-base
+        profiles: [dev, staging, production]
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: ${BUILD_TARGET:-dev}
+            args:
+                USER_ID: ${USER_ID:-1000}
+                GROUP_ID: ${GROUP_ID:-1000}
+                TZ: ${TZ:-UTC}
+        environment:
+            CONTAINER_MODE: http
+        ports:
+            - '${APP_PORT:-8080}:8000'
+            - '${VITE_PORT:-5173}:5173'
+        healthcheck:
+            test: ['CMD', 'healthcheck']
+            interval: 10s
+            timeout: 3s
+            retries: 5
+            start_period: 30s
+
+    horizon:
+        <<: *app-base
+        profiles: [dev, staging, production]
+        environment:
+            CONTAINER_MODE: horizon
+
+    scheduler:
+        <<: *app-base
+        profiles: [staging, production]
+        environment:
+            CONTAINER_MODE: scheduler
+
+    ssr:
+        <<: *app-base
+        profiles: [staging, production]
+        environment:
+            CONTAINER_MODE: ssr
+
+    reverb:
+        <<: *app-base
+        profiles: [staging, production]
+        environment:
+            CONTAINER_MODE: reverb
+
+    pgsql:
+        image: postgres:18-alpine
+        profiles: [dev, staging, production]
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-laravel}
+            POSTGRES_USER: ${DB_USERNAME:-laravel}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+        command: postgres -c config_file=/var/lib/postgresql/postgresql.conf
+        volumes:
+            - stack-pgsql:/var/lib/postgresql/data
+            - ./docker/deployment/postgres/postgresql.conf:/var/lib/postgresql/postgresql.conf:ro
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${DB_USERNAME:-laravel} -d ${DB_DATABASE:-laravel}',
+                ]
+            <<: *data-hc
+        networks: [stack]
+        restart: unless-stopped
+        security_opt: [no-new-privileges:true]
+        logging:
+            { driver: json-file, options: { max-size: '50m', max-file: '10' } }
+
+    redis:
+        image: redis:7-alpine
+        profiles: [dev, staging, production]
+        command:
+            - redis-server
+            - --maxmemory
+            - ${REDIS_MAXMEMORY:-256mb}
+            - --maxmemory-policy
+            - allkeys-lru
+            - --save
+            - '60 10000'
+            - --save
+            - '300 10'
+            - --appendonly
+            - 'yes'
+        volumes:
+            - stack-redis:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            <<: *data-hc
+        networks: [stack]
+        restart: unless-stopped
+        security_opt: [no-new-privileges:true]
+        logging:
+            { driver: json-file, options: { max-size: '50m', max-file: '10' } }
+
+networks:
+    stack:
+        driver: bridge
+
+volumes:
+    stack-pgsql:
+    stack-redis:
