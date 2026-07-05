@@ -8,7 +8,6 @@ x-app-base: &app-base
         options: { max-size: '50m', max-file: '10', compress: 'true' }
     env_file:
         - path: .env
-          required: false
     depends_on:
         pgsql: { condition: service_healthy }
         redis: { condition: service_healthy }

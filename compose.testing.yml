@@ -10,8 +10,11 @@ services:
   app:
     environment:
       APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: pgsql
       DB_DATABASE: testing
       DB_PASSWORD: secret
+      DB_USERNAME: laravel
       QUEUE_CONNECTION: sync
       CACHE_STORE: array
       SESSION_DRIVER: array

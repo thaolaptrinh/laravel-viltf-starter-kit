@@ -1,6 +1,8 @@
 x-production-image: &production-image
   image: ghcr.io/${GH_REPO:-thaolaptrinh/laravel-viltf}:${IMAGE_TAG:-latest}
-  env_file: [.env.production]
+  env_file:
+    - path: .env.production
+      required: false
   ports: !reset []
   restart: unless-stopped
   stop_grace_period: 35s
