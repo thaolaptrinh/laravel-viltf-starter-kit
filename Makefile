@@ -132,7 +132,7 @@ tinker: ## Tinker
 
 test: ## Run tests in isolated testing env: make test CMD="--filter=TestName"
 	$(COMPOSE_TEST) up -d --wait pgsql redis
-	$(COMPOSE_TEST) run --rm app php artisan test $(CMD)
+	$(COMPOSE_TEST) run --rm app php artisan test --testsuite=Unit --testsuite=Feature $(CMD)
 	$(COMPOSE_TEST) down
 
 fresh: ## Migrate fresh + seed

@@ -65,7 +65,7 @@ jobs:
           IMAGE: app:dev-test
           DB_DATABASE: testing
           QUEUE_CONNECTION: sync
-        run: docker compose -f compose.yaml -f compose.testing.yml run --rm app php artisan test --parallel
+        run: docker compose -f compose.yaml -f compose.testing.yml run --rm app php artisan test --testsuite=Unit --testsuite=Feature --parallel
 
       - name: Verify frontend build
         env:
