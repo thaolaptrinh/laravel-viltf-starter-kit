@@ -89,10 +89,12 @@ RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
 
 # ─── Composer deps (dev) ────────────────────────────────────────────────────
 # Extends `base` (PHP 8.5 + extensions) to ensure platform check matches runtime.
+# Note: autoload IS generated here because dev target mounts source at runtime
+# (no composer.json available at build time for dump-autoload).
 FROM base AS composer-dev
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN composer install --no-interaction --no-autoloader --no-scripts --no-progress
+RUN composer install --no-interaction --no-scripts --no-progress
 
 # ─── Composer deps (production) ─────────────────────────────────────────────
 FROM base AS composer-production
@@ -128,9 +130,8 @@ COPY --link --from=node-runtime /usr/local/bin /usr/local/bin
 COPY --link --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN corepack enable pnpm && corepack prepare pnpm@latest --activate
 
-# Dev vendor
+# Dev vendor (with autoload generated, no source code needed)
 COPY --link --chown=${USER}:${GROUP} --from=composer-dev /app/vendor ./vendor
-RUN composer dump-autoload --apcu
 
 ENV WITH_VITE=true \
     XDEBUG_MODE=off
