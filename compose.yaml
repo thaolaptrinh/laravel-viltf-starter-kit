@@ -27,7 +27,7 @@ x-data-healthcheck: &data-hc
 services:
     app:
         <<: *app-base
-        profiles: [dev, staging, production]
+        profiles: [dev, staging, production, testing]
         build:
             context: .
             dockerfile: Dockerfile
@@ -50,7 +50,7 @@ services:
 
     horizon:
         <<: *app-base
-        profiles: [dev, staging, production]
+        profiles: [dev, staging, production, testing]
         environment:
             CONTAINER_MODE: horizon
 
@@ -74,7 +74,7 @@ services:
 
     pgsql:
         image: postgres:18-alpine
-        profiles: [dev, staging, production]
+        profiles: [dev, staging, production, testing]
         environment:
             POSTGRES_DB: ${DB_DATABASE:-laravel}
             POSTGRES_USER: ${DB_USERNAME:-laravel}
@@ -98,7 +98,7 @@ services:
 
     redis:
         image: redis:7-alpine
-        profiles: [dev, staging, production]
+        profiles: [dev, staging, production, testing]
         command:
             - redis-server
             - --maxmemory

@@ -42,7 +42,7 @@ jobs:
           GROUP_ID: '1000'
           DB_DATABASE: testing
         run: |
-          docker compose --profile dev up -d pgsql redis
+          docker compose -f compose.yaml -f compose.testing.yml up -d --wait pgsql redis
           # Wait for pgsql to be healthy
           for i in {1..30}; do
             docker compose exec -T pgsql pg_isready -U laravel -d testing && break
@@ -72,7 +72,7 @@ jobs:
           IMAGE: app:dev-test
           DB_DATABASE: testing
           QUEUE_CONNECTION: sync
-        run: docker compose run --rm app php artisan test --parallel
+        run: docker compose -f compose.yaml -f compose.testing.yml run --rm app php artisan test --parallel
 
       - name: Verify frontend build
         env:

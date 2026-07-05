@@ -12,6 +12,7 @@ IMAGE ?= ghcr.io/thaolaptrinh/laravel-viltf
 COMPOSE_DEV  = COMPOSE_PROFILES=dev  docker compose
 COMPOSE_STAGING  = COMPOSE_PROFILES=staging  docker compose -f compose.yaml -f compose.staging.yml
 COMPOSE_PRODUCTION = COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml
+COMPOSE_TEST = COMPOSE_PROFILES=testing docker compose -f compose.yaml -f compose.testing.yml
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -129,8 +130,10 @@ shell: ## Get shell in app container
 tinker: ## Tinker
 	$(COMPOSE_DEV) exec app php artisan tinker
 
-test: ## Run tests: make test CMD="--filter=TestName"
-	$(COMPOSE_DEV) exec app php artisan test $(CMD)
+test: ## Run tests in isolated testing env: make test CMD="--filter=TestName"
+	$(COMPOSE_TEST) up -d --wait pgsql redis
+	$(COMPOSE_TEST) run --rm app php artisan test $(CMD)
+	$(COMPOSE_TEST) down
 
 fresh: ## Migrate fresh + seed
 	$(COMPOSE_DEV) exec app php artisan migrate:fresh --seed
