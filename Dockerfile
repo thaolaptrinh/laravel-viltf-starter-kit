@@ -40,7 +40,7 @@ RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezo
 # System packages
 RUN apk update && apk upgrade && apk add --no-cache \
     curl wget vim tzdata ncdu procps unzip ca-certificates bash supervisor \
-    libsodium-dev libpng-dev libzip-dev icu-libs oniguruma-db postgresql-libs && \
+    libsodium-dev libpng-dev libzip-dev icu-libs postgresql-libs && \
     rm -rf /var/cache/apk/*
 
 # PHP extensions
