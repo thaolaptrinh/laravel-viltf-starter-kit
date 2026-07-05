@@ -79,6 +79,7 @@ COPY --link docker/deployment/supercronic/laravel /etc/supercronic/laravel
 
 RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
     mkdir -p \
+        /tmp/opcache-file-cache \
         ${ROOT}/storage/framework/sessions \
         ${ROOT}/storage/framework/views \
         ${ROOT}/storage/framework/cache \
@@ -94,14 +95,12 @@ RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
 FROM base AS composer-dev
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN mkdir -p /tmp/opcache-file-cache && \
     composer install --no-interaction --no-scripts --no-progress
 
 # ─── Composer deps (production) ─────────────────────────────────────────────
 FROM base AS composer-production
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN mkdir -p /tmp/opcache-file-cache && \
     composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress
 
 # ─── Assets stage ───────────────────────────────────────────────────────────
@@ -125,6 +124,7 @@ RUN apk add --no-cache \
     rm -rf /var/cache/apk/*
 
 # Install Node + pnpm in dev target (for Vite HMR) — copy from node-runtime stage
+    RUN mkdir -p /tmp/opcache-file-cache
 COPY --link --from=node-runtime /usr/local/bin /usr/local/bin
 COPY --link --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate
