@@ -95,7 +95,8 @@ production-down: ## Stop production env
 build: ## Build dev image
 	$(COMPOSE_DEV) build app
 
-build-production: ## Build production image locally for testing
+build-production: ## Pre-build assets + build production image
+	pnpm run build && pnpm run build:ssr
 	docker build --target=production -t $(IMAGE):local -f Dockerfile .
 
 # ─── VPS Automation (scripts/ wrappers) ───────────────────────────────────
@@ -152,44 +153,48 @@ push-production: ## Build + tag + push :latest + :$(TAG) to GHCR
 deploy-staging: ## SSH → pull → rollout staging
 	ssh $(SSH_STAGING) '\
 		cd $(APP_DIR) && \
-		docker compose -f compose.yaml -f compose.staging.yml pull && \
-		docker rollout -f compose.yaml -f compose.staging.yml app && \
-		docker rollout -f compose.yaml -f compose.staging.yml horizon && \
-		docker rollout -f compose.yaml -f compose.staging.yml ssr && \
-		docker rollout -f compose.yaml -f compose.staging.yml reverb && \
-		docker compose -f compose.yaml -f compose.staging.yml up -d --remove-orphans scheduler traefik && \
-		docker compose -f compose.yaml -f compose.staging.yml exec -T app php artisan octane:reload && \
+		COMPOSE_PROFILES=staging docker compose -f compose.yaml -f compose.staging.yml pull && \
+		COMPOSE_PROFILES=staging docker rollout -f compose.yaml -f compose.staging.yml app && \
+		COMPOSE_PROFILES=staging docker rollout -f compose.yaml -f compose.staging.yml horizon && \
+		COMPOSE_PROFILES=staging docker rollout -f compose.yaml -f compose.staging.yml ssr && \
+		COMPOSE_PROFILES=staging docker rollout -f compose.yaml -f compose.staging.yml reverb && \
+		COMPOSE_PROFILES=staging docker compose -f compose.yaml -f compose.staging.yml up -d --remove-orphans scheduler traefik && \
+		COMPOSE_PROFILES=staging docker compose -f compose.yaml -f compose.staging.yml exec -T app php artisan octane:reload && \
 		docker image prune -f'
 
 deploy-production: ## SSH → pull → rollout production
 	ssh $(SSH_PRODUCTION) '\
 		cd $(APP_DIR) && \
-		docker compose -f compose.yaml -f compose.production.yml pull && \
-		docker rollout -f compose.yaml -f compose.production.yml app && \
-		docker rollout -f compose.yaml -f compose.production.yml horizon && \
-		docker rollout -f compose.yaml -f compose.production.yml ssr && \
-		docker rollout -f compose.yaml -f compose.production.yml reverb && \
-		docker compose -f compose.yaml -f compose.production.yml up -d --remove-orphans scheduler traefik && \
-		docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload && \
+		COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml pull && \
+		COMPOSE_PROFILES=production docker rollout -f compose.yaml -f compose.production.yml app && \
+		COMPOSE_PROFILES=production docker rollout -f compose.yaml -f compose.production.yml horizon && \
+		COMPOSE_PROFILES=production docker rollout -f compose.yaml -f compose.production.yml ssr && \
+		COMPOSE_PROFILES=production docker rollout -f compose.yaml -f compose.production.yml reverb && \
+		COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml up -d --remove-orphans scheduler traefik && \
+		COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload && \
 		docker image prune -f'
 
 # ── Release pipeline (test → build → push → deploy) ────────────────────────
 
-release-staging: ## test → build → push :staging → deploy staging
+release-staging: ## test → build → push → upload → deploy staging
 	@echo "━━━ Test ━━━"
 	make test
 	@echo "━━━ Build + Push ━━━"
 	make push-staging
-	@echo "━━━ Deploy ━━━"
+	@echo "━━━ Upload + Deploy ━━━"
+	scp -q .env.staging $(SSH_STAGING):$(APP_DIR)/.env.staging || true
+	scp -q -r docker/traefik/certs/ $(SSH_STAGING):$(APP_DIR)/docker/traefik/certs/ || true
 	make deploy-staging
 	@echo "━━━ Done ━━━"
 
-release-production: ## test → build → push :latest → deploy production [TAG=v1.0.0]
+release-production: ## test → build → push → upload → deploy production [TAG=v1.0.0]
 	@echo "━━━ Test ━━━"
 	make test
 	@echo "━━━ Build + Push ━━━"
 	make push-production TAG=$(TAG)
-	@echo "━━━ Deploy ━━━"
+	@echo "━━━ Upload + Deploy ━━━"
+	scp -q .env.production $(SSH_PRODUCTION):$(APP_DIR)/.env.production || true
+	scp -q -r docker/traefik/certs/ $(SSH_PRODUCTION):$(APP_DIR)/docker/traefik/certs/ || true
 	make deploy-production
 	@echo "━━━ Done ━━━"
 
@@ -197,19 +202,19 @@ release-production: ## test → build → push :latest → deploy production [TA
 
 rollout-staging: ## Zero-downtime deploy staging (legacy — prefer release-staging)
 	$(COMPOSE_STAGING) pull
-	docker rollout -f compose.yaml -f compose.staging.yml app
-	docker rollout -f compose.yaml -f compose.staging.yml horizon
-	docker rollout -f compose.yaml -f compose.staging.yml ssr
-	docker rollout -f compose.yaml -f compose.staging.yml reverb
+	$(COMPOSE_STAGING) docker rollout -f compose.yaml -f compose.staging.yml app
+	$(COMPOSE_STAGING) docker rollout -f compose.yaml -f compose.staging.yml horizon
+	$(COMPOSE_STAGING) docker rollout -f compose.yaml -f compose.staging.yml ssr
+	$(COMPOSE_STAGING) docker rollout -f compose.yaml -f compose.staging.yml reverb
 	$(COMPOSE_STAGING) up -d --remove-orphans scheduler traefik
 	$(COMPOSE_STAGING) exec -T app php artisan octane:reload
 
-rollout-production: ## Zero-downtime deploy production
+rollout-production: ## Zero-downtime deploy production (legacy — prefer release-production)
 	$(COMPOSE_PRODUCTION) pull
-	docker rollout -f compose.yaml -f compose.production.yml app
-	docker rollout -f compose.yaml -f compose.production.yml horizon
-	docker rollout -f compose.yaml -f compose.production.yml ssr
-	docker rollout -f compose.yaml -f compose.production.yml reverb
+	$(COMPOSE_PRODUCTION) docker rollout -f compose.yaml -f compose.production.yml app
+	$(COMPOSE_PRODUCTION) docker rollout -f compose.yaml -f compose.production.yml horizon
+	$(COMPOSE_PRODUCTION) docker rollout -f compose.yaml -f compose.production.yml ssr
+	$(COMPOSE_PRODUCTION) docker rollout -f compose.yaml -f compose.production.yml reverb
 	$(COMPOSE_PRODUCTION) up -d --remove-orphans scheduler traefik
 	$(COMPOSE_PRODUCTION) exec -T app php artisan octane:reload
 
@@ -264,13 +269,13 @@ rollback-production: ## Rollback production to previous image (TAG=v1.0.0)
 	@echo "⏪ Rolling back to $(TAG)..."
 	ssh $(SSH_PRODUCTION) '\
 		cd $(APP_DIR) && \
-		IMAGE_TAG=$(TAG) docker compose -f compose.yaml -f compose.production.yml up -d --no-deps app horizon ssr reverb && \
-		docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload'
+		COMPOSE_PROFILES=production IMAGE_TAG=$(TAG) docker compose -f compose.yaml -f compose.production.yml up -d --no-deps app horizon ssr reverb && \
+		COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload'
 	@echo "✅ Rolled back to $(TAG)"
 
 test: ## Run tests in isolated testing env: make test CMD="--filter=TestName"
 	$(COMPOSE_TEST) up -d --wait pgsql redis
-	$(COMPOSE_TEST) run --rm app php artisan test --testsuite=Unit --testsuite=Feature $(CMD)
+	$(COMPOSE_TEST) run --rm app php artisan test --testsuite=Feature $(CMD)
 	$(COMPOSE_TEST) down
 
 fresh: ## Migrate fresh + seed

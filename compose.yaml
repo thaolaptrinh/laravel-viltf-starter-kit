@@ -114,7 +114,7 @@ services:
         volumes:
             - stack-redis:/data
         healthcheck:
-            test: ['CMD', 'redis-cli', 'ping']
+            test: ['CMD-SHELL', 'redis-cli -a "${REDIS_PASSWORD:-}" ping 2>/dev/null || redis-cli ping']
             <<: *data-hc
         networks: [stack]
         restart: unless-stopped

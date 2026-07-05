@@ -40,13 +40,8 @@ dbml-error.log
 .env.staging
 .env.production
 
-# Compose local overrides + backups
-compose.override.local.yml
-compose.yaml.sail.bak
-
 # Backups
 backups/
-compose.yaml.sail.bak
 
 docker/traefik/certs/*.pem
 docker/traefik/certs/*.key
