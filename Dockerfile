@@ -106,10 +106,7 @@ RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no
 FROM node:${NODE_VERSION}-alpine AS assets
 WORKDIR /app
 COPY --link package.json pnpm-lock.yaml ./
-RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate && \
-    pnpm install --no-lockfile
 COPY --link . .
-RUN pnpm run build && pnpm run build:ssr
 
 # ─── Node runtime (alias used by dev stage to copy node binary) ─────────────
 FROM node:${NODE_VERSION}-alpine AS node-runtime
