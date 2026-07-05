@@ -94,13 +94,15 @@ RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
 FROM base AS composer-dev
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN composer install --no-interaction --no-scripts --no-progress
+RUN mkdir -p /tmp/opcache-file-cache && \
+    composer install --no-interaction --no-scripts --no-progress
 
 # ─── Composer deps (production) ─────────────────────────────────────────────
 FROM base AS composer-production
 WORKDIR /app
 COPY --link composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress
+RUN mkdir -p /tmp/opcache-file-cache && \
+    composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress
 
 # ─── Assets stage ───────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS assets
