@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Pre-push hook: run tests before pushing.
+# If tests fail, push is blocked.
+# To bypass (emergency only): git push --no-verify
+set -e
+
+echo "Running tests before push..."
+
+make test CMD="--compact"
+
+echo "Tests passed. Proceeding with push."

@@ -11,6 +11,7 @@ services:
     environment:
       APP_ENV: testing
       DB_DATABASE: testing
+      DB_PASSWORD: secret
       QUEUE_CONNECTION: sync
       CACHE_STORE: array
       SESSION_DRIVER: array

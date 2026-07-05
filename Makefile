@@ -14,6 +14,11 @@ COMPOSE_STAGING  = COMPOSE_PROFILES=staging  docker compose -f compose.yaml -f c
 COMPOSE_PRODUCTION = COMPOSE_PROFILES=production docker compose -f compose.yaml -f compose.production.yml
 COMPOSE_TEST = COMPOSE_PROFILES=testing docker compose -f compose.yaml -f compose.testing.yml
 
+# SSH config (set in .env or ~/.ssh/config)
+SSH_STAGING ?= $(STAGING_SSH_USER)@$(STAGING_SSH_HOST)
+SSH_PRODUCTION ?= $(PRODUCTION_SSH_USER)@$(PRODUCTION_SSH_HOST)
+APP_DIR ?= /opt/app
+
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
@@ -78,7 +83,74 @@ build-production: ## Build production image locally for testing
 
 # ─── Deploy (zero-downtime via docker-rollout) ──────────────────────────────
 
-rollout-staging: ## Zero-downtime deploy staging
+# ── Push to GHCR (requires `docker login ghcr.io` once) ────────────────────
+
+push-staging: ## Build + tag + push :staging to GHCR
+	make build-production
+	docker tag $(IMAGE):local $(IMAGE):staging
+	docker push $(IMAGE):staging
+	@echo "Pushed $(IMAGE):staging"
+
+push-production: ## Build + tag + push :latest + :$(TAG) to GHCR
+	make build-production
+	docker tag $(IMAGE):local $(IMAGE):latest
+	docker push $(IMAGE):latest
+	@if [ -n "$(TAG)" ]; then \
+		docker tag $(IMAGE):local $(IMAGE):$(TAG); \
+		docker push $(IMAGE):$(TAG); \
+		echo "Pushed $(IMAGE):$(TAG)"; \
+	fi
+	@echo "Pushed $(IMAGE):latest"
+
+# ── Deploy via SSH + docker-rollout ────────────────────────────────────────
+
+deploy-staging: ## SSH → pull → rollout staging
+	ssh $(SSH_STAGING) '\
+		cd $(APP_DIR) && \
+		docker compose -f compose.yaml -f compose.staging.yml pull && \
+		docker rollout -f compose.yaml -f compose.staging.yml app && \
+		docker rollout -f compose.yaml -f compose.staging.yml horizon && \
+		docker rollout -f compose.yaml -f compose.staging.yml ssr && \
+		docker rollout -f compose.yaml -f compose.staging.yml reverb && \
+		docker compose -f compose.yaml -f compose.staging.yml up -d --remove-orphans scheduler traefik && \
+		docker compose -f compose.yaml -f compose.staging.yml exec -T app php artisan octane:reload && \
+		docker image prune -f'
+
+deploy-production: ## SSH → pull → rollout production
+	ssh $(SSH_PRODUCTION) '\
+		cd $(APP_DIR) && \
+		docker compose -f compose.yaml -f compose.production.yml pull && \
+		docker rollout -f compose.yaml -f compose.production.yml app && \
+		docker rollout -f compose.yaml -f compose.production.yml horizon && \
+		docker rollout -f compose.yaml -f compose.production.yml ssr && \
+		docker rollout -f compose.yaml -f compose.production.yml reverb && \
+		docker compose -f compose.yaml -f compose.production.yml up -d --remove-orphans scheduler traefik && \
+		docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload && \
+		docker image prune -f'
+
+# ── Release pipeline (test → build → push → deploy) ────────────────────────
+
+release-staging: ## test → build → push :staging → deploy staging
+	@echo "━━━ Test ━━━"
+	make test
+	@echo "━━━ Build + Push ━━━"
+	make push-staging
+	@echo "━━━ Deploy ━━━"
+	make deploy-staging
+	@echo "━━━ Done ━━━"
+
+release-production: ## test → build → push :latest → deploy production [TAG=v1.0.0]
+	@echo "━━━ Test ━━━"
+	make test
+	@echo "━━━ Build + Push ━━━"
+	make push-production TAG=$(TAG)
+	@echo "━━━ Deploy ━━━"
+	make deploy-production
+	@echo "━━━ Done ━━━"
+
+# ── Legacy targets (keep for compatibility) ────────────────────────────────
+
+rollout-staging: ## Zero-downtime deploy staging (legacy — prefer release-staging)
 	$(COMPOSE_STAGING) pull
 	docker rollout -f compose.yaml -f compose.staging.yml app
 	docker rollout -f compose.yaml -f compose.staging.yml horizon
