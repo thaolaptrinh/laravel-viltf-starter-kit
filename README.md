@@ -46,9 +46,9 @@ A modern, full-featured Laravel starter kit with **Vue 3**, **Inertia.js**, **Ta
 | PHP      | `8.5+`                                                     |
 | Composer | `2.x`                                                      |
 | Node.js  | `20+` (with `pnpm`)                                        |
-| Docker   | required for [Laravel Sail](https://laravel.com/docs/sail) |
+| Docker   | required for [Laravel Docker compose](https://laravel.com/docs/sail) |
 
-> This project ships with **Laravel Sail** (Docker). All commands below run inside Sail — no local PHP/Postgres setup required.
+> This project ships with **Laravel Docker compose** (Docker). All commands below run inside Docker compose — no local PHP/Postgres setup required.
 
 ---
 
@@ -74,8 +74,8 @@ The `composer setup` script runs the full bootstrap for you:
 ### Start the dev environment
 
 ```bash
-vendor/bin/sail up -d        # start Postgres + Redis + app
-vendor/bin/sail composer run dev
+make dev        # start Postgres + Redis + app
+composer run dev
 ```
 
 Then visit **http://localhost** (app) and **http://localhost/admin** (Filament panel).
@@ -96,7 +96,7 @@ Then visit **http://localhost** (app) and **http://localhost/admin** (Filament p
 Pull requests are welcome! Please ensure the test suite passes before submitting:
 
 ```bash
-vendor/bin/sail composer test
+composer test
 ```
 
 ---

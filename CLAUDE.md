@@ -22,7 +22,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
 - laravel/pint (PINT) - v1
-- laravel/sail (SAIL) - v1
+- docker (DOCKER) - compose v2
 - pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
 - rector/rector (RECTOR) - v2
@@ -52,7 +52,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Frontend Bundling
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `vendor/bin/sail pnpm run build`, `vendor/bin/sail pnpm run dev`, or `vendor/bin/sail composer run dev`. Ask them.
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `pnpm run build`, `pnpm run dev`, or `composer run dev`. Ask them.
 
 ## Documentation Files
 
@@ -90,15 +90,15 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Artisan
 
-- Run Artisan commands directly via the command line (e.g., `vendor/bin/sail artisan route:list`). Use `vendor/bin/sail artisan list` to discover available commands and `vendor/bin/sail artisan [command] --help` to check parameters.
-- Inspect routes with `vendor/bin/sail artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
-- Read configuration values using dot notation: `vendor/bin/sail artisan config:show app.name`, `vendor/bin/sail artisan config:show database.default`. Or read config files directly from the `config/` directory.
+- Run Artisan commands directly via the command line (e.g., `artisan route:list`). Use `artisan list` to discover available commands and `artisan [command] --help` to check parameters.
+- Inspect routes with `artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
+- Read configuration values using dot notation: `artisan config:show app.name`, `artisan config:show database.default`. Or read config files directly from the `config/` directory.
 
 ## Tinker
 
 - Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
-- Always use single quotes to prevent shell expansion: `vendor/bin/sail artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `vendor/bin/sail artisan tinker --execute 'User::where("active", true)->count();'`
+- Always use single quotes to prevent shell expansion: `artisan tinker --execute 'Your::code();'`
+  - Double quotes for PHP strings inside: `artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
@@ -117,26 +117,13 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
-=== sail rules ===
-
-# Laravel Sail
-
-- This project runs inside Laravel Sail's Docker containers. You MUST execute all commands through Sail.
-- Start services using `vendor/bin/sail up -d` and stop them with `vendor/bin/sail stop`.
-- Open the application in the browser by running `vendor/bin/sail open`.
-- Always prefix PHP, Artisan, Composer, and Node commands with `vendor/bin/sail`. Examples:
-    - Run Artisan Commands: `vendor/bin/sail artisan migrate`
-    - Install Composer packages: `vendor/bin/sail composer install`
-    - Execute Node commands: `vendor/bin/sail pnpm run dev`
-    - Execute PHP scripts: `vendor/bin/sail php [script]`
-- View all available Sail commands by running `vendor/bin/sail` without arguments.
-
+=== docker rules ===
 === tests rules ===
 
 # Test Enforcement
 
 - Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `vendor/bin/sail artisan test --compact` with a specific filename or filter.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `artisan test --compact` with a specific filename or filter.
 
 === inertia-laravel/core rules ===
 
@@ -165,13 +152,13 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 # Do Things the Laravel Way
 
-- Use `vendor/bin/sail artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `vendor/bin/sail artisan list` and check their parameters with `vendor/bin/sail artisan [command] --help`.
-- If you're creating a generic PHP class, use `vendor/bin/sail artisan make:class`.
+- Use `artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `artisan list` and check their parameters with `artisan [command] --help`.
+- If you're creating a generic PHP class, use `artisan make:class`.
 - Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
 
 ### Model Creation
 
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `vendor/bin/sail artisan make:model --help` to check the available options.
+- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `artisan make:model --help` to check the available options.
 
 ## APIs & Eloquent Resources
 
@@ -185,11 +172,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `vendor/bin/sail artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+- When creating tests, make use of `artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
 
 ## Vite Error
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `vendor/bin/sail pnpm run build` or ask the user to run `vendor/bin/sail pnpm run dev` or `vendor/bin/sail composer run dev`.
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `pnpm run build` or ask the user to run `pnpm run dev` or `composer run dev`.
 
 === wayfinder/core rules ===
 
@@ -201,16 +188,16 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 
 # Laravel Pint Code Formatter
 
-- If you have modified any PHP files, you must run `vendor/bin/sail bin pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/sail bin pint --test --format agent`, simply run `vendor/bin/sail bin pint --format agent` to fix any formatting issues.
+- If you have modified any PHP files, you must run `bin pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
+- Do not run `bin pint --test --format agent`, simply run `bin pint --format agent` to fix any formatting issues.
 
 === pest/core rules ===
 
 ## Pest
 
-- This project uses Pest for testing. Create tests: `vendor/bin/sail artisan make:test --pest {name}`.
-- The `{name}` argument should not include the test suite directory. Use `vendor/bin/sail artisan make:test --pest SomeFeatureTest` instead of `vendor/bin/sail artisan make:test --pest Feature/SomeFeatureTest`.
-- Run tests: `vendor/bin/sail artisan test --compact` or filter: `vendor/bin/sail artisan test --compact --filter=testName`.
+- This project uses Pest for testing. Create tests: `artisan make:test --pest {name}`.
+- The `{name}` argument should not include the test suite directory. Use `artisan make:test --pest SomeFeatureTest` instead of `artisan make:test --pest Feature/SomeFeatureTest`.
+- Run tests: `artisan test --compact` or filter: `artisan test --compact --filter=testName`.
 - Do NOT delete tests without approval.
 
 === inertia-vue/core rules ===
@@ -467,8 +454,8 @@ This application follows an Action-based architecture: controllers stay thin and
 
 Choose the controller type based on the operation it performs:
 
-- **Pure CRUD** → one resource controller with the standard methods (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`). Generate with `vendor/bin/sail artisan make:controller ArticleController --resource`.
-- **Single, non-CRUD operation** → a dedicated invokable (single-action) controller using `__invoke()`. Generate with `vendor/bin/sail artisan make:controller PublishArticleController --invokable`. One operation = one controller.
+- **Pure CRUD** → one resource controller with the standard methods (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`). Generate with `artisan make:controller ArticleController --resource`.
+- **Single, non-CRUD operation** → a dedicated invokable (single-action) controller using `__invoke()`. Generate with `artisan make:controller PublishArticleController --invokable`. One operation = one controller.
 
 In both cases, inject Actions via method injection and resolve the authenticated user with a `#[CurrentUser] User $user` attribute (see [Using Actions](#using-actions)):
 
@@ -521,7 +508,7 @@ This application prefers business logic to live in reusable, composable Action c
 - Inject dependencies via the constructor using private properties; actions with no dependencies can rely on `handle()` alone.
 - Actions are invoked from anywhere: jobs, commands, HTTP requests, API requests, and MCP requests.
 - Wrap complex, multi-model operations in `DB::transaction()` to keep them atomic.
-- Create new actions with `vendor/bin/sail artisan make:action "{name}" --no-interaction`.
+- Create new actions with `artisan make:action "{name}" --no-interaction`.
 
 A typical Action injects its collaborators through the constructor and exposes a `handle()` method:
 
