@@ -1,0 +1,25 @@
+# Testing overrides — used by CI and `make test`.
+# Separate DB, sync queue, array cache. Source mounts from CI workspace.
+# Usage:
+#   make test
+#   make test CMD="--filter=UserTest"
+# CI:  docker compose -f compose.yaml -f compose.test.yaml up -d --wait pgsql redis
+#      docker compose -f compose.yaml -f compose.test.yaml run --rm app php artisan test --parallel
+
+services:
+    app:
+        environment:
+            APP_ENV: testing
+            DB_CONNECTION: pgsql
+            DB_HOST: pgsql
+            DB_DATABASE: testing
+            DB_PASSWORD: secret
+            DB_USERNAME: laravel
+            QUEUE_CONNECTION: sync
+            CACHE_STORE: array
+            SESSION_DRIVER: array
+            BROADCAST_CONNECTION: 'null'
+
+    pgsql:
+        environment:
+            POSTGRES_DB: testing

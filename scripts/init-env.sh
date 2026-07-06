@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─── init-env.sh ──────────────────────────────────────────────────────────────
-# Run ON THE VPS to generate .env.production with auto-generated secrets.
+# Run ON THE VPS to generate .env.production / .env.staging with auto secrets.
 #
 # Usage (on VPS):
 #   cd /opt/app && ./scripts/init-env.sh production
@@ -10,8 +10,9 @@ set -euo pipefail
 #
 # What it does:
 #   1. Copies .env.{env}.example → .env.{env}
-#   2. Auto-generates: APP_KEY, REVERB_APP_KEY, REVERB_APP_SECRET, TRAEFIK_AUTH
-#   3. Prompts for: DB_PASSWORD, REDIS_PASSWORD (or uses auto-generated if skipped)
+#   2. Auto-generates: APP_KEY, REVERB_APP_KEY/SECRET, DB/REDIS passwords,
+#      TRAEFIK_AUTH (bcrypt via htpasswd, auto-installs apache2-utils if missing)
+#   3. Prompts for domain
 
 ENV="${1:-production}"
 ENV_FILE=".env.${ENV}"
@@ -19,7 +20,7 @@ ENV_EXAMPLE="${ENV_FILE}.example"
 
 if [ ! -f "$ENV_EXAMPLE" ]; then
     echo "❌ Template not found: ${ENV_EXAMPLE}"
-    echo "   Run 'make upload-env-template' first to upload the template file."
+    echo "   Repo not cloned yet? Run on VPS after 'make setup-vps'."
     exit 1
 fi
 
@@ -28,48 +29,63 @@ echo "🔐 Generating secrets for ${ENV} environment"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Copy template if env doesn't exist
+# Copy template if env doesn't exist. If exists: prompt (TTY) or auto-decide (non-TTY).
 if [ -f "$ENV_FILE" ]; then
-    echo "⚠️  ${ENV_FILE} already exists."
-    read -rp "   Overwrite? [y/N] " confirm
-    if [ "${confirm,,}" != "y" ]; then
-        echo "   Skipped."
+    if grep -q "CHANGE_ME" "$ENV_FILE" 2>/dev/null; then
+        echo "⚠️  ${ENV_FILE} contains placeholder values — overwriting with fresh secrets."
+    elif [ -t 0 ] && [ -t 1 ]; then
+        # Interactive TTY — ask
+        echo "⚠️  ${ENV_FILE} already exists."
+        read -rp "   [O]verwrite or [s]kip? " choice
+        case "${choice,,}" in
+            o|overwrite) ;;
+            *) echo "   ⏭ Skipped."; exit 0 ;;
+        esac
+    else
+        # Non-TTY (e.g. bootstrap via SSH) — skip to preserve existing secrets
+        echo "⚠️  ${ENV_FILE} already exists — skipping (run 'make init-env-production' interactively to regenerate)."
         exit 0
     fi
 fi
 cp "$ENV_EXAMPLE" "$ENV_FILE"
 
-# Auto-generate secrets
-APP_KEY=$(docker run --rm ghcr.io/thaolaptrinh/laravel-viltf:dev php artisan key:generate --show 2>/dev/null || \
-          php -r "echo 'base64:' . base64_encode(random_bytes(32));")
+# ─── Secrets (pure openssl — no PHP/Docker required on VPS) ──────────────────
+APP_KEY="base64:$(openssl rand -base64 32)"
 REVERB_KEY=$(openssl rand -hex 16)
 REVERB_SECRET=$(openssl rand -hex 32)
-TRAEFIK_AUTH_HASH=$(echo -n "admin:$(openssl rand -base64 12)" | base64)
+DB_PASS=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 24)
+REDIS_PASS=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 24)
 
-# Prompt for DB password
-read -rsp "🔑 DB password (ENTER for auto-generate): " DB_PASS
-echo ""
-if [ -z "$DB_PASS" ]; then
-    DB_PASS=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 24)
-    echo "   Auto-generated: $DB_PASS (saved to ${ENV_FILE})"
+# ─── Domain (required, can be passed via APP_DOMAIN env for non-interactive) ─
+if [ -z "${APP_DOMAIN:-}" ]; then
+    read -rp "🌐 App domain (e.g., yourdomain.com): " APP_DOMAIN
 fi
-
-# Prompt for Redis password
-read -rsp "🔑 Redis password (ENTER for auto-generate): " REDIS_PASS
-echo ""
-if [ -z "$REDIS_PASS" ]; then
-    REDIS_PASS=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 24)
-    echo "   Auto-generated: $REDIS_PASS (saved to ${ENV_FILE})"
-fi
-
-# Prompt for domain
-read -rp "🌐 App domain (e.g., yourdomain.com): " APP_DOMAIN
 if [ -z "$APP_DOMAIN" ]; then
     echo "❌ Domain is required"
     exit 1
 fi
+echo "🌐 Domain: ${APP_DOMAIN}"
 
-# Replace placeholders in env file
+# ─── Traefik dashboard basic auth (bcrypt) ───────────────────────────────────
+TRAEFIK_USER="${TRAEFIK_USER:-admin}"
+TRAEFIK_PASS=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | head -c 16)
+SKIP_TRAEFIK=false
+if ! command -v htpasswd >/dev/null 2>&1; then
+    echo "📦 Installing apache2-utils for htpasswd..."
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get install -y apache2-utils >/dev/null
+    else
+        echo "⚠️  htpasswd not available — skip TRAEFIK_AUTH."
+        SKIP_TRAEFIK=true
+    fi
+fi
+if [ "$SKIP_TRAEFIK" = false ]; then
+    TRAEFIK_AUTH=$(htpasswd -nbB "$TRAEFIK_USER" "$TRAEFIK_PASS" | sed 's/\$/$$/g')
+else
+    TRAEFIK_AUTH=""
+fi
+
+# ─── Write to env file ───────────────────────────────────────────────────────
 sed -i \
     -e "s|APP_URL=.*|APP_URL=https://${APP_DOMAIN}|" \
     -e "s|APP_DOMAIN=.*|APP_DOMAIN=${APP_DOMAIN}|" \
@@ -82,19 +98,26 @@ sed -i \
     -e "s|^VITE_REVERB_HOST=.*|VITE_REVERB_HOST=\"${APP_DOMAIN}\"|" \
     "$ENV_FILE"
 
-# Generate Traefik basic auth (bcrypt)
-if command -v htpasswd &>/dev/null; then
-    TRAEFIK_PASS=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9')
-    TRAEFIK_AUTH=$(htpasswd -nbB admin "$TRAEFIK_PASS" | sed 's/\$/$$/g')
+if [ -n "$TRAEFIK_AUTH" ]; then
     sed -i "s|TRAEFIK_AUTH=.*|TRAEFIK_AUTH=${TRAEFIK_AUTH}|" "$ENV_FILE"
-    echo "   Traefik dashboard: admin / $TRAEFIK_PASS"
 fi
 
 echo ""
-echo "════════════════════════════════"
+echo "═══════════════════════════════════════════════════════"
 echo "✅ ${ENV_FILE} ready"
-echo "════════════════════════════════"
+echo "═══════════════════════════════════════════════════════"
 echo ""
-echo "Secrets saved to ${ENV_FILE}"
+echo "Generated secrets (saved to ${ENV_FILE}, not shown again):"
+echo "   APP_KEY            : ${APP_KEY}"
+echo "   REVERB_APP_KEY     : ${REVERB_KEY}"
+echo "   REVERB_APP_SECRET  : ${REVERB_SECRET}"
+echo "   DB_PASSWORD        : ${DB_PASS}"
+echo "   REDIS_PASSWORD     : ${REDIS_PASS}"
+if [ -n "$TRAEFIK_AUTH" ]; then
+    echo "   Traefik dashboard  : ${TRAEFIK_USER} / ${TRAEFIK_PASS}"
+fi
 echo ""
-echo "Next: make upload-certs && make deploy-${ENV}"
+echo "Next steps:"
+echo "   1. make setup-vps-dns SSH_USER=... SSH_HOST=... CF_API_TOKEN=... APP_DOMAIN=..."
+echo "   2. make deploy-${ENV}"
+echo "   3. After deploy: make migrate-${ENV}"

@@ -6,8 +6,6 @@ x-app-base: &app-base
     logging:
         driver: json-file
         options: { max-size: '50m', max-file: '10', compress: 'true' }
-    env_file:
-        - path: .env
     depends_on:
         pgsql: { condition: service_healthy }
         redis: { condition: service_healthy }
@@ -35,13 +33,18 @@ services:
                 USER_ID: ${USER_ID:-1000}
                 GROUP_ID: ${GROUP_ID:-1000}
                 TZ: ${TZ:-UTC}
-        environment:
-            CONTAINER_MODE: http
+        command:
+            [
+                'php',
+                'artisan',
+                'octane:frankenphp',
+                '--host=0.0.0.0',
+                '--port=8000',
+            ]
         ports:
             - '${APP_PORT:-8080}:8000'
-            - '${VITE_PORT:-5173}:5173'
         healthcheck:
-            test: ['CMD', 'healthcheck']
+            test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:8000/up || exit 1']
             interval: 10s
             timeout: 3s
             retries: 5
@@ -50,26 +53,27 @@ services:
     horizon:
         <<: *app-base
         profiles: [dev, staging, production, testing]
-        environment:
-            CONTAINER_MODE: horizon
+        command: ['php', 'artisan', 'horizon']
+        stop_grace_period: 3600s
 
     scheduler:
         <<: *app-base
         profiles: [staging, production]
-        environment:
-            CONTAINER_MODE: scheduler
+        command: ['supercronic', '/etc/supercronic/laravel']
 
     ssr:
         <<: *app-base
         profiles: [staging, production]
-        environment:
-            CONTAINER_MODE: ssr
+        command:
+            ['php', 'artisan', 'inertia:start-ssr', '--runtime=node', '--quiet']
 
     reverb:
         <<: *app-base
         profiles: [staging, production]
-        environment:
-            CONTAINER_MODE: reverb
+        command:
+            ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
+        ulimits:
+            nofile: { soft: 65536, hard: 65536 }
 
     pgsql:
         image: postgres:18-alpine
@@ -80,7 +84,7 @@ services:
             POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
         volumes:
             - stack-pgsql:/var/lib/postgresql
-            - ./docker/deployment/postgres/postgresql.conf:/var/lib/postgresql/postgresql.conf:ro
+            - ./docker/postgres/postgresql.conf:/var/lib/postgresql/postgresql.conf:ro
         healthcheck:
             test:
                 [
@@ -97,24 +101,28 @@ services:
     redis:
         image: redis:7-alpine
         profiles: [dev, staging, production, testing]
-    command:
-        - redis-server
-        - --requirepass
-        - ${REDIS_PASSWORD:-}
-        - --maxmemory
-        - ${REDIS_MAXMEMORY:-256mb}
-        - --maxmemory-policy
-        - allkeys-lru
-        - --save
-        - '60 10000'
-        - --save
-        - '300 10'
-        - --appendonly
-        - 'yes'
+        command:
+            - redis-server
+            - --requirepass
+            - ${REDIS_PASSWORD:-}
+            - --maxmemory
+            - ${REDIS_MAXMEMORY:-256mb}
+            - --maxmemory-policy
+            - allkeys-lru
+            - --save
+            - '60 10000'
+            - --save
+            - '300 10'
+            - --appendonly
+            - 'yes'
         volumes:
             - stack-redis:/data
         healthcheck:
-            test: ['CMD-SHELL', 'redis-cli -a "${REDIS_PASSWORD:-}" ping 2>/dev/null || redis-cli ping']
+            test:
+                [
+                    'CMD-SHELL',
+                    'redis-cli -a "${REDIS_PASSWORD:-}" ping 2>/dev/null || redis-cli ping',
+                ]
             <<: *data-hc
         networks: [stack]
         restart: unless-stopped
@@ -128,4 +136,6 @@ networks:
 
 volumes:
     stack-pgsql:
+        name: ${VOLUME_PREFIX:-stack}-pgsql
     stack-redis:
+        name: ${VOLUME_PREFIX:-stack}-redis

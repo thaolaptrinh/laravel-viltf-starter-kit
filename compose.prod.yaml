@@ -1,0 +1,164 @@
+x-production-image: &production-image
+    image: ghcr.io/${GH_REPO:-thaolaptrinh/laravel-viltf}:${IMAGE_TAG:-latest}
+    env_file:
+        - .env.production
+    ports: !reset []
+    volumes: !reset []
+    restart: unless-stopped
+    stop_grace_period: 35s
+    deploy:
+        resources:
+            limits: { memory: '${APP_MEM_LIMIT:-384M}' }
+
+services:
+    app:
+        <<: *production-image
+        build: !reset null
+        command:
+            [
+                'php',
+                'artisan',
+                'octane:frankenphp',
+                '--host=0.0.0.0',
+                '--port=8000',
+            ]
+        environment:
+            APP_ENV: production
+            OCTANE_HTTPS: 'true'
+        deploy:
+            resources:
+                limits: { memory: '${APP_MEM_LIMIT:-384M}' }
+        labels:
+            traefik.enable: true
+            traefik.docker.network: stack
+            traefik.http.routers.app.rule: Host(`${APP_DOMAIN}`)
+            traefik.http.routers.app.entryPoints: app
+            traefik.http.routers.app.priority: 10
+            traefik.http.routers.app-tls.rule: Host(`${APP_DOMAIN}`)
+            traefik.http.routers.app-tls.entryPoints: app-secure
+            traefik.http.routers.app-tls.tls: true
+            traefik.http.routers.app-tls.priority: 10
+            traefik.http.routers.app-tls.middlewares: security-headers,compress
+            traefik.http.services.app.loadbalancer.server.port: 8000
+            traefik.http.services.app.loadbalancer.healthCheck.path: /up
+            traefik.http.services.app.loadbalancer.healthCheck.interval: 5s
+            traefik.http.services.app.loadbalancer.healthCheck.timeout: 3s
+        volumes:
+            - ./storage:/var/www/html/storage
+
+    horizon:
+        <<: *production-image
+        command: ['php', 'artisan', 'horizon']
+        stop_grace_period: 3600s
+        deploy:
+            resources:
+                limits: { memory: 256M }
+
+    scheduler:
+        <<: *production-image
+        command: ['supercronic', '/etc/supercronic/laravel']
+        deploy:
+            resources:
+                limits: { memory: 64M }
+
+    ssr:
+        <<: *production-image
+        command:
+            ['php', 'artisan', 'inertia:start-ssr', '--runtime=node', '--quiet']
+        deploy:
+            resources:
+                limits: { memory: 256M }
+
+    reverb:
+        <<: *production-image
+        command:
+            ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080']
+        deploy:
+            resources:
+                limits: { memory: 256M }
+        ulimits:
+            nofile: { soft: 65536, hard: 65536 }
+        labels:
+            traefik.enable: true
+            traefik.docker.network: stack
+            traefik.http.routers.reverb.rule: Host(`${APP_DOMAIN}`) && PathPrefix(`/app`)
+            traefik.http.routers.reverb.entryPoints: app-secure
+            traefik.http.routers.reverb.tls: true
+            traefik.http.routers.reverb.priority: 30
+            traefik.http.routers.reverb.middlewares: security-headers,compress
+            traefik.http.services.reverb.loadbalancer.server.port: 8080
+
+    traefik:
+        image: traefik:v3.6
+        restart: unless-stopped
+        stop_grace_period: 35s
+        security_opt: [no-new-privileges:true]
+        ulimits:
+            nofile: { soft: 65536, hard: 65536 }
+        deploy:
+            resources:
+                limits: { memory: 96M }
+        ports:
+            - '80:80'
+            - '443:443'
+            - '443:443/udp'
+            - '127.0.0.1:8080:8080'
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+            - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+            - ./docker/traefik/certs:/certs:ro
+        networks: [stack]
+        labels:
+            traefik.enable: true
+            traefik.http.routers.traefik.rule: Host(`traefik.${APP_DOMAIN}`)
+            traefik.http.routers.traefik.entryPoints: app-secure
+            traefik.http.routers.traefik.tls: true
+            traefik.http.routers.traefik.service: api@internal
+            traefik.http.routers.traefik.middlewares: traefik-auth,security-headers
+
+    backup:
+        image: offen/docker-volume-backup:v2
+        profiles: [backup]
+        restart: unless-stopped
+        security_opt: [no-new-privileges:true]
+        environment:
+            BACKUP_FILENAME: backup-%Y-%m-%dT%H-%M-%S.tar.gz
+            BACKUP_PRUNING_PREFIX: backup-
+            BACKUP_CRON_EXPRESSION: '0 2 * * *'
+            BACKUP_RETENTION_DAYS: '7'
+        volumes:
+            - pgdump:/backup/pgdump:ro
+            - ./backups:/archive
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        networks: [stack]
+        labels:
+            traefik.enable: false
+
+    # Runs pg_dump on cron, writes to shared volume consumed by `backup` above.
+    # Required because file-level backup of a running Postgres is inconsistent.
+    pgdump:
+        image: postgres:18-alpine
+        profiles: [backup]
+        restart: unless-stopped
+        security_opt: [no-new-privileges:true]
+        environment:
+            PGHOST: pgsql
+            PGUSER: ${DB_USERNAME:-laravel}
+            PGPASSWORD: ${DB_PASSWORD:-secret}
+            PGDATABASE: ${DB_DATABASE:-laravel}
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                echo "0 2 * * * pg_dump -Fc -f /dump/$${PGDATABASE}-$$(date +\%Y\%m\%dT\%H\%M\%S).pgc && find /dump -name '*.pgc' -mtime +7 -delete" > /etc/crontabs/root
+                crond -f -l 8
+        volumes:
+            - pgdump:/dump
+        depends_on:
+            pgsql: { condition: service_healthy }
+        networks: [stack]
+        labels:
+            traefik.enable: false
+
+volumes:
+    pgdump:

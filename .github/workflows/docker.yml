@@ -32,7 +32,7 @@ jobs:
           GROUP_ID: '1000'
           DB_DATABASE: testing
         run: |
-          docker compose -f compose.yaml -f compose.testing.yml up -d --wait pgsql redis
+          docker compose -f compose.yaml -f compose.test.yaml up -d --wait pgsql redis
 
       - name: Composer validate
         env:
@@ -48,14 +48,13 @@ jobs:
         env:
           IMAGE: app:dev-test
         run: docker compose run --rm app composer test:types
-        continue-on-error: true # PHPStan warnings shouldn't block CI yet
 
       - name: Pest tests
         env:
           IMAGE: app:dev-test
           DB_DATABASE: testing
           QUEUE_CONNECTION: sync
-        run: docker compose -f compose.yaml -f compose.testing.yml run --rm app php artisan test --testsuite=Unit --testsuite=Feature --parallel
+        run: docker compose -f compose.yaml -f compose.test.yaml run --rm app php artisan test --testsuite=Unit --testsuite=Feature --parallel
 
       - name: Verify frontend build
         env:
@@ -90,13 +89,6 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=staging,enable=${{ github.ref == 'refs/heads/develop' }}
 
-      - name: Build frontend assets (needed for COPY in production target)
-        run: |
-          corepack enable pnpm
-          pnpm install --frozen-lockfile 2>/dev/null || pnpm install --no-lockfile
-          pnpm run build && pnpm run build:ssr
-        continue-on-error: true
-
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -122,13 +114,12 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             cd /opt/app
-            docker compose -f compose.yaml -f compose.staging.yml pull
-            docker rollout -f compose.yaml -f compose.staging.yml app
-            docker rollout -f compose.yaml -f compose.staging.yml horizon
-            docker rollout -f compose.yaml -f compose.staging.yml ssr
-            docker rollout -f compose.yaml -f compose.staging.yml reverb
-            docker compose -f compose.yaml -f compose.staging.yml up -d --remove-orphans scheduler traefik
-            docker compose -f compose.yaml -f compose.staging.yml exec -T app php artisan octane:reload
+            docker compose -f compose.yaml -f compose.staging.yaml pull
+            docker rollout -f compose.yaml -f compose.staging.yaml app
+            docker rollout -f compose.yaml -f compose.staging.yaml horizon
+            docker rollout -f compose.yaml -f compose.staging.yaml ssr
+            docker rollout -f compose.yaml -f compose.staging.yaml reverb
+            docker compose -f compose.yaml -f compose.staging.yaml up -d --remove-orphans scheduler traefik
             docker image prune -f
 
   deploy-production:
@@ -144,11 +135,10 @@ jobs:
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
             cd /opt/app
-            docker compose -f compose.yaml -f compose.production.yml pull
-            docker rollout -f compose.yaml -f compose.production.yml app
-            docker rollout -f compose.yaml -f compose.production.yml horizon
-            docker rollout -f compose.yaml -f compose.production.yml ssr
-            docker rollout -f compose.yaml -f compose.production.yml reverb
-            docker compose -f compose.yaml -f compose.production.yml up -d --remove-orphans scheduler traefik
-            docker compose -f compose.yaml -f compose.production.yml exec -T app php artisan octane:reload
+            docker compose -f compose.yaml -f compose.prod.yaml pull
+            docker rollout -f compose.yaml -f compose.prod.yaml app
+            docker rollout -f compose.yaml -f compose.prod.yaml horizon
+            docker rollout -f compose.yaml -f compose.prod.yaml ssr
+            docker rollout -f compose.yaml -f compose.prod.yaml reverb
+            docker compose -f compose.yaml -f compose.prod.yaml up -d --remove-orphans scheduler traefik
             docker image prune -f

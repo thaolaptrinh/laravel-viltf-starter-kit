@@ -5,10 +5,10 @@ ARG FRANKENPHP_VERSION=1.12.4
 ARG COMPOSER_VERSION=2.8
 ARG NODE_VERSION=22
 
-# ─── Composer binary (alias used by base stage to copy composer binary) ─────
+# ─── Composer binary ─────────────────────────────────────────────────────────
 FROM composer:${COMPOSER_VERSION} AS composer-binary
 
-# ─── Base stage ─────────────────────────────────────────────────────────────
+# ─── Base stage ──────────────────────────────────────────────────────────────
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}-alpine AS base
 
 ARG USER_ID=1000
@@ -26,8 +26,6 @@ ENV TERM=xterm-color \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_FUND=0 \
     COMPOSER_MAX_PARALLEL_HTTP=48 \
-    WITH_VITE=false \
-    RUNNING_MIGRATIONS_AND_SEEDERS=false \
     XDG_CONFIG_HOME=${ROOT}/.config \
     XDG_DATA_HOME=${ROOT}/.data
 
@@ -37,9 +35,9 @@ SHELL ["/bin/sh", "-eou", "pipefail", "-c"]
 
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
 
-# System packages
-RUN apk update && apk upgrade && apk add --no-cache \
-    curl wget vim tzdata ncdu procps unzip ca-certificates bash supervisor \
+# System packages — tini as PID 1 (reap zombies + forward signals)
+RUN apk add --no-cache \
+    curl wget vim tzdata ncdu procps unzip ca-certificates bash tini \
     libsodium-dev libpng-dev libzip-dev icu-libs postgresql-libs && \
     rm -rf /var/cache/apk/*
 
@@ -48,7 +46,7 @@ RUN install-php-extensions \
     apcu pcntl mbstring bcmath sockets pdo_pgsql \
     opcache exif zip intl gd redis ffi uv
 
-# Supercronic
+# Supercronic (scheduler)
 RUN arch="$(apk --print-arch)" && \
     case "$arch" in \
         x86_64)  cronic='supercronic-linux-amd64' ;; \
@@ -66,18 +64,15 @@ RUN arch="$(apk --print-arch)" && \
 COPY --link --from=composer-binary /usr/bin/composer /usr/bin/composer
 
 # Non-root user matching host UID/GID
-RUN addgroup -g ${GROUP_ID} ${GROUP} 2>/dev/null || true && \
-    adduser -D -G ${GROUP} -u ${USER_ID} -s /bin/sh ${USER} 2>/dev/null || true
+RUN (getent group ${GROUP} || addgroup -g ${GROUP_ID} ${GROUP}) && \
+    (getent passwd ${USER} || adduser -D -G ${GROUP} -u ${USER_ID} -s /bin/sh ${USER})
 
 # Deployment artifacts
-COPY --link docker/deployment/supervisord.conf /etc/supervisord.conf
-COPY --link docker/deployment/supervisord.*.conf /etc/supervisor/conf.d/
-COPY --link docker/deployment/start-container /usr/local/bin/start-container
-COPY --link docker/deployment/healthcheck /usr/local/bin/healthcheck
-COPY --link docker/deployment/php.ini ${PHP_INI_DIR}/conf.d/99-php.ini
-COPY --link docker/deployment/supercronic/laravel /etc/supercronic/laravel
+COPY --link docker/app/entrypoint.sh /usr/local/bin/entrypoint
+COPY --link docker/app/php.ini ${PHP_INI_DIR}/conf.d/99-php.ini
+COPY --link docker/app/supercronic/laravel /etc/supercronic/laravel
 
-RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
+RUN chmod +x /usr/local/bin/entrypoint && \
     mkdir -p \
         ${ROOT}/storage/framework/sessions \
         ${ROOT}/storage/framework/views \
@@ -87,62 +82,70 @@ RUN chmod +x /usr/local/bin/start-container /usr/local/bin/healthcheck && \
         ${ROOT}/bootstrap/cache && \
     chown -R ${USER}:${GROUP} ${ROOT}
 
-# ─── Composer deps (dev) ────────────────────────────────────────────────────
-# Extends `base` (PHP 8.5 + extensions) to ensure platform check matches runtime.
-# Note: autoload IS generated here because dev target mounts source at runtime
-# (no composer.json available at build time for dump-autoload).
+# tini = PID 1 (signal + zombie handling), entrypoint = runtime init, CMD default = octane
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint"]
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8000"]
+
+# ─── Composer deps (dev) ─────────────────────────────────────────────────────
 FROM base AS composer-dev
 WORKDIR /app
 COPY --link composer.json composer.lock ./
 RUN composer install --no-interaction --no-scripts --no-progress
 
-# ─── Composer deps (production) ─────────────────────────────────────────────
+# ─── Composer deps (production) ──────────────────────────────────────────────
 FROM base AS composer-production
 WORKDIR /app
 COPY --link composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts --no-progress
 
-# ─── Assets stage ───────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS assets
+# ─── Assets stage ────────────────────────────────────────────────────────────
+# Uses base (PHP already installed) because @laravel/vite-plugin-wayfinder
+# calls `php artisan wayfinder:generate` during `pnpm build`.
+FROM base AS assets
+USER root
 WORKDIR /app
-COPY --link package.json pnpm-lock.yaml ./
+
+# Node + pnpm for frontend build (Alpine's nodejs lacks corepack — install pnpm via npm)
+RUN apk add --no-cache nodejs npm && \
+    rm -rf /var/cache/apk/* && \
+    npm install -g pnpm@11.10.0
+
+COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# Composer deps needed for wayfinder:generate (no autoload yet — dump it)
+COPY --link --from=composer-production /app/vendor ./vendor
+
+# Copy all source + generate autoload + build
 COPY --link . .
+RUN composer dump-autoload --optimize --apcu --no-dev && \
+    php artisan optimize --no-interaction && \
+    pnpm run build && pnpm run build:ssr
 
-# ─── Node runtime (alias used by dev stage to copy node binary) ─────────────
-FROM node:${NODE_VERSION}-alpine AS node-runtime
-
-# ─── Dev target ─────────────────────────────────────────────────────────────
+# ─── Dev target ──────────────────────────────────────────────────────────────
 FROM base AS dev
 
 # XDebug + Node + pnpm for dev workflow
 RUN apk add --no-cache \
-    linux-headers autoconf make g++ && \
+    linux-headers autoconf make g++ nodejs npm && \
     pecl install xdebug && \
     docker-php-ext-enable xdebug && \
     apk del linux-headers autoconf make g++ && \
-    rm -rf /var/cache/apk/*
+    rm -rf /var/cache/apk/* && \
+    npm install -g pnpm@11.10.0
 
-# Install Node + pnpm in dev target (for Vite HMR) — copy from node-runtime stage
-COPY --link --from=node-runtime /usr/local/bin /usr/local/bin
-COPY --link --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN corepack enable pnpm && corepack prepare pnpm@11.9.0 --activate
-
-# Dev vendor (with autoload generated, no source code needed)
+# Dev vendor (autoload included)
 COPY --link --chown=${USER}:${GROUP} --from=composer-dev /app/vendor ./vendor
 
-ENV WITH_VITE=true \
-    XDEBUG_MODE=off
+ENV XDEBUG_MODE=off
 
 USER ${USER}
 EXPOSE 8000 5173 9003
-ENTRYPOINT ["start-container"]
-CMD []
 
-# ─── Production target ──────────────────────────────────────────────────────
+# ─── Production target ───────────────────────────────────────────────────────
 FROM base AS production
 
-ENV APP_ENV=production \
-    WITH_VITE=false
+ENV APP_ENV=production
 
 # Production vendor
 COPY --link --chown=${USER}:${GROUP} --from=composer-production /app/vendor ./vendor
@@ -155,13 +158,9 @@ COPY --link --chown=${USER}:${GROUP} --from=assets /app/storage/ssr ./storage/ss
 COPY --link --chown=${USER}:${GROUP} . .
 
 RUN composer dump-autoload --optimize --apcu --no-dev && \
-    php artisan optimize --no-interaction && \
     php artisan storage:link --no-interaction || true && \
     chown -R ${USER}:${GROUP} ${ROOT} && \
     find / -perm /6000 -type f -exec chmod a-s {} + 2>/dev/null || true
 
 USER ${USER}
 EXPOSE 8000
-ENTRYPOINT ["start-container"]
-HEALTHCHECK --start-period=5s --interval=10s --timeout=3s --retries=5 CMD healthcheck || exit 1
-CMD []

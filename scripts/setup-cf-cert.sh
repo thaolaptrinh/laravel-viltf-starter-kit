@@ -2,50 +2,46 @@
 set -euo pipefail
 
 # ─── setup-cf-cert.sh ─────────────────────────────────────────────────────────
-# Generate Cloudflare Origin Certificate via API.
-# Saves cert.pem + private.key to docker/traefik/certs/
+# Generate Cloudflare Origin Certificate via API with openssl CSR.
+# Saves cert.pem + private.key to docker/traefik/certs/ (in CWD).
 #
-# Usage:
-#   make setup-cf-cert APP_DOMAIN=yourdomain.com
-#   make setup-cf-cert CF_API_TOKEN=xxx APP_DOMAIN=yourdomain.com  (non-interactive)
+# Run ON VPS so private key never touches laptop.
 #
-# Prerequisites:
-#   - CF API Token with "Origin CA:Edit" permission
-#   - python3 (for JSON parsing)
+# Token needs: Zone.Zone:Read + Zone.SSL and Certificates:Edit
 
 CERTS_DIR="docker/traefik/certs"
 
-# Prompt for missing values (env var → interactive input)
 CF_API_TOKEN="${CF_API_TOKEN:-}"
-if [ -z "$CF_API_TOKEN" ]; then
-    read -rsp "🔑 CF API Token (Origin CA:Edit scope, input hidden): " CF_API_TOKEN
-    echo ""
-    [ -z "$CF_API_TOKEN" ] && { echo "❌ Token required"; exit 1; }
-fi
+[ -z "$CF_API_TOKEN" ] && read -rsp "CF API Token (input hidden): " CF_API_TOKEN && echo
+[ -z "$CF_API_TOKEN" ] && { echo "❌ Token required"; exit 1; }
 
 APP_DOMAIN="${APP_DOMAIN:-}"
-if [ -z "$APP_DOMAIN" ]; then
-    read -rp "🌐 Domain (e.g., yourdomain.com): " APP_DOMAIN
-    echo ""
-    [ -z "$APP_DOMAIN" ] && { echo "❌ Domain required"; exit 1; }
-fi
+[ -z "$APP_DOMAIN" ] && read -rp "Domain: " APP_DOMAIN
+[ -z "$APP_DOMAIN" ] && { echo "❌ Domain required"; exit 1; }
 
 echo "🔐 Generating CF Origin Cert for *.${APP_DOMAIN} + ${APP_DOMAIN} (15 years)..."
 
 mkdir -p "$CERTS_DIR"
 
-# Single API call — cert + key from same response (calling twice = 2 different certs)
-response=$(curl -sf -X POST "https://api.cloudflare.com/client/v4/certificates" \
+# Generate RSA private key + CSR (CF requires CSR for origin-rsa)
+openssl req -new -newkey rsa:2048 -nodes -keyout "${CERTS_DIR}/private.key" \
+    -subj "/CN=${APP_DOMAIN}/O=Laravel VILTF" \
+    -out "${CERTS_DIR}/request.csr" 2>/dev/null
+
+CSR=$(cat "${CERTS_DIR}/request.csr" | sed 's/$/\\n/' | tr -d '\n')
+
+response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/certificates" \
     -H "Authorization: Bearer ${CF_API_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{
         \"hostnames\": [\"*.${APP_DOMAIN}\", \"${APP_DOMAIN}\"],
         \"requested_validity\": 5475,
         \"request_type\": \"origin-rsa\",
-        \"rsa_key_size\": 2048
+        \"csr\": \"${CSR}\"
     }")
 
-# Parse JSON response — extract cert + private key from ONE call
+rm -f "${CERTS_DIR}/request.csr"
+
 echo "$response" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
@@ -56,16 +52,10 @@ if not data.get('success'):
 result = data['result']
 with open('${CERTS_DIR}/cert.pem', 'w') as f:
     f.write(result['certificate'])
-with open('${CERTS_DIR}/private.key', 'w') as f:
-    f.write(result['private_key'])
-print('✅ Saved:')
-print(f'   ${CERTS_DIR}/cert.pem')
-print(f'   ${CERTS_DIR}/private.key')
+print('✅ cert.pem saved')
 "
 
 chmod 600 "${CERTS_DIR}/private.key"
 chmod 644 "${CERTS_DIR}/cert.pem"
-
-echo ""
-echo "📋 Next steps:"
-echo "   make upload-certs SSH_USER=user SSH_HOST=your-vps-ip"
+echo "   ${CERTS_DIR}/private.key"
+echo "   ${CERTS_DIR}/cert.pem"

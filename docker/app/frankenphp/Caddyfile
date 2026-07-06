@@ -1,0 +1,37 @@
+{
+    admin off
+    auto_https off
+    order php before file_server
+}
+
+:8000 {
+    root * /var/www/html/public
+    encode zstd br gzip
+
+    request_body {
+        max_size 500MB
+    }
+
+    @static {
+        file
+        path *.js *.css *.jpg *.jpeg *.webp *.gif *.png *.ico *.svg *.woff2 *.woff *.webm *.mp4
+    }
+    header @static Cache-Control "public, immutable, stale-while-revalidate, max-age=31536000"
+
+    @staticshort {
+        file
+        path *.json *.xml *.rss
+    }
+    header @staticshort Cache-Control "no-cache, max-age=3600"
+
+    @rejected `path('*.bak', '*.conf', '*.dist', '*.ini', '*.log', '*.orig', '*.sql', '*.swp', '*.swo', '*/.*') && !path('*/.well-known/*')`
+    error @rejected 401
+
+    php {
+        try_files {path} /index.php
+        split_path
+        resolve_root_symlink
+        max_workers 8
+        thread_workers
+    }
+}

@@ -12,10 +12,11 @@ node_modules/
 !.env.staging.example
 !.env.production.example
 compose*.yml
+compose*.yaml
 Dockerfile*
 Makefile
 docker/
-!docker/deployment
+!docker/app
 !docker/traefik
 frankenphp
 frankenphp.*

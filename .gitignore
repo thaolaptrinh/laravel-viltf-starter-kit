@@ -7,15 +7,11 @@
 /public/storage
 /storage/*.key
 /storage/pail
-/resources/js/actions
-/resources/js/routes
-/resources/js/wayfinder
 /vendor
 .DS_Store
 .env
-.env.backup
-.env.staging
-.env.production
+.env.*
+!.env.*.example
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -33,16 +29,8 @@ dbml-error.log
 **/caddy
 /frankenphp
 /frankenphp-worker.php
-!docker/deployment/frankenphp/
-
-# Docker secrets
-.env
-.env.staging
-.env.production
-
-# Backups
 backups/
-
+!docker/deployment/frankenphp/
 docker/traefik/certs/*.pem
 docker/traefik/certs/*.key
 docker/traefik/certs/private.key
