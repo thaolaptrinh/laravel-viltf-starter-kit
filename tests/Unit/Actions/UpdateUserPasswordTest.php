@@ -15,7 +15,7 @@ test('user can update their password', function (): void {
         password: 'new-password',
     );
 
-    app(UpdateUserPassword::class)->handle($user, $data);
+    resolve(UpdateUserPassword::class)->handle($user, $data);
 
     expect(Hash::check('new-password', $user->fresh()->password))->toBeTrue();
 });
@@ -28,5 +28,5 @@ test('current password must be correct to update password', function (): void {
         password: 'new-password',
     );
 
-    app(UpdateUserPassword::class)->handle($user, $data);
+    resolve(UpdateUserPassword::class)->handle($user, $data);
 })->throws(Illuminate\Validation\ValidationException::class, 'The provided password does not match our records.');

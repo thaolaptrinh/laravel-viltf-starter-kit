@@ -14,7 +14,7 @@ test('user profile information can be updated', function (): void {
         email: 'test@example.com',
     );
 
-    app(UpdateUserProfile::class)->handle($user, $data);
+    resolve(UpdateUserProfile::class)->handle($user, $data);
 
     expect($user->fresh())
         ->name->toBe('Test User')
@@ -29,7 +29,7 @@ test('email verification status is reset when email changes', function (): void 
         email: 'new-email@example.com',
     );
 
-    app(UpdateUserProfile::class)->handle($user, $data);
+    resolve(UpdateUserProfile::class)->handle($user, $data);
 
     expect($user->fresh()->email_verified_at)->toBeNull();
 });
@@ -42,7 +42,7 @@ test('email verification status is unchanged when email stays the same', functio
         email: $user->email,
     );
 
-    app(UpdateUserProfile::class)->handle($user, $data);
+    resolve(UpdateUserProfile::class)->handle($user, $data);
 
     expect($user->fresh()->email_verified_at)->not->toBeNull();
 });
@@ -56,5 +56,5 @@ test('email must be unique', function (): void {
         email: 'existing@example.com',
     );
 
-    app(UpdateUserProfile::class)->handle($user, $data);
+    resolve(UpdateUserProfile::class)->handle($user, $data);
 })->throws(Illuminate\Validation\ValidationException::class);

@@ -8,7 +8,7 @@ use App\Models\User;
 test('user can delete their account', function (): void {
     $user = User::factory()->create();
 
-    app(DeleteUserAccount::class)->handle($user, 'password');
+    resolve(DeleteUserAccount::class)->handle($user, 'password');
 
     expect($user->fresh())->toBeNull();
 });
@@ -16,5 +16,5 @@ test('user can delete their account', function (): void {
 test('correct password must be provided to delete account', function (): void {
     $user = User::factory()->create();
 
-    app(DeleteUserAccount::class)->handle($user, 'wrong-password');
+    resolve(DeleteUserAccount::class)->handle($user, 'wrong-password');
 })->throws(Illuminate\Validation\ValidationException::class, 'The provided password does not match our records.');
