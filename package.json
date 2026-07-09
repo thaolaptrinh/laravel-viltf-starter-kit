@@ -31,7 +31,7 @@
         "@vitejs/plugin-vue": "^6.0.7",
         "concurrently": "^10.0.3",
         "playwright": "^1.61.1",
-        "typescript": "^6.0.3",
+        "typescript": "^7.0.2",
         "vite": "catalog:",
         "vite-plus": "catalog:",
         "vue-tsc": "^3.3.7"
