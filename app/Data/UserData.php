@@ -21,14 +21,20 @@ final class UserData extends Data
 
     public static function fromUser(User $user): self
     {
+        $createdAt = $user->created_at->toISOString();
+        $updatedAt = $user->updated_at->toISOString();
+
+        assert($createdAt !== null);
+        assert($updatedAt !== null);
+
         return new self(
             id: $user->id,
             name: $user->name,
             email: $user->email,
             avatar: $user->avatar,
             email_verified_at: $user->email_verified_at?->toISOString(),
-            created_at: $user->created_at->toISOString(),
-            updated_at: $user->updated_at->toISOString(),
+            created_at: $createdAt,
+            updated_at: $updatedAt,
         );
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,11 +42,14 @@ final class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
-        auth()->logout();
+        Auth::logout();
+
+        /** @var string $password */
+        $password = $request->input('password');
 
         $deleteUserAccount->handle(
-            $user,
-            $request->input('password'),
+            user: $user,
+            password: $password,
         );
 
         $request->session()->invalidate();

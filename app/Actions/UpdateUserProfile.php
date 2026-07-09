@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class UpdateUserProfile
 {
-    public function handle(User $user, ProfileData $data): User
+    public function handle(User $user, ProfileData $data): ?User
     {
         ProfileData::validate($data->toArray());
 
