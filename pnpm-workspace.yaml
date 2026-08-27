@@ -20,7 +20,7 @@ minimumReleaseAgeExclude:
     - vue-tsc@3.3.7
 catalog:
     vite: npm:@voidzero-dev/vite-plus-core@0.2.2
-    vite-plus: 0.2.2
+    vite-plus: 0.2.9
 overrides:
     vite: 'catalog:'
 peerDependencyRules:
